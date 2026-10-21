@@ -1,24 +1,45 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, for example v0.9.1"
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, macos-15, windows-latest]
     steps:
-      - name: Checkout
+      - name: Checkout tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Validate tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$(git rev-parse HEAD)"
+          version="${RELEASE_TAG#v}"
+          package_version="$(sed -n 's/^version:[[:space:]]*//p' ansido.cabal | head -1 | tr -d '[:space:]')"
+          test "$version" = "$package_version"
       - name: Set up GHC and Cabal
         uses: haskell-actions/setup@v2
         with:
@@ -26,15 +47,20 @@ jobs:
           cabal-version: "latest"
       - name: Update package index
         run: cabal update
-      - name: Build executable
-        run: cabal build exe:ansido
+      - name: Build and test
+        run: |
+          cabal build all --enable-tests
+          cabal test all
+          cabal check
+          cabal sdist
       - name: Package
+        id: package
         shell: bash
         run: |
           set -euo pipefail
           binary="$(cabal list-bin exe:ansido)"
           architecture="$(uname -m)"
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           mkdir -p dist
           cp "$binary" dist/
           cp README.md LICENSE CHANGELOG.md dist/
@@ -55,28 +81,41 @@ jobs:
               tar -czf "$asset" -C dist .
               ;;
           esac
+          echo "asset=${asset}" >> "$GITHUB_OUTPUT"
           echo "Created ${asset}"
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.package.outputs.asset }}
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: ansido-${{ matrix.os }}
-          path: |
-            *.zip
-            *.tar.gz
+          path: ${{ steps.package.outputs.asset }}
           if-no-files-found: error
 
   publish:
     name: Publish release
     needs: build
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
     steps:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
           files: dist/*
           generate_release_notes: true

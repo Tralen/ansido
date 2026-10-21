@@ -42,7 +42,7 @@ data Screen
 newtype RowIndex = RowIndex { rowIndexValue :: Int }
   deriving (Eq, Ord, Show)
 
--- | Which states the table shows. 'ShowAll' disables the filter.
+-- | Which statuses the table shows. 'ShowAll' disables the filter.
 data Filter = ShowAll | OnlyStatus Status
   deriving (Eq, Show)
 

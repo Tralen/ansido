@@ -3,6 +3,14 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.9.0
+- Raised Ansiform to 1.0 and adopted `promptWithInitial` in the edit forms.
+- Edit task and edit category now open their prompts with the current title, note and name, so only the changed part has to be retyped.
+- Empty input no longer means "keep current": an empty title or category name is rejected, while an empty task note clears the note.
+- Replaced the edit hint `Empty input keeps the current value.` with `Edit the value and press Enter.`.
+- Rewrote `docs/ansiform-form-defaults.md` to describe the implemented Ansiform API and its use in ansido.
+- Added prompt tests for the initial values in the edit forms.
+
 ### 0.8.0
 - Added arrow, `j`/`k` and `w`/`s` navigation to the category screen, so a category can be highlighted without opening its board.
 - `Enter` now opens the board of the highlighted category.
@@ -80,6 +88,14 @@
 
 ## Revision History
 *Patches, bug fixes, and minor updates.*
+
+### 0.9.1
+- Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.
+- Added a gitleaks history scan to CI and a pre-commit configuration for staged changes.
+- Aligned CI with the release template: GHC 9.2.8 and 9.14.1, dependency cache, `cabal check` and `cabal sdist`.
+- Corrected the package description, README data file path, Windows instructions, versioning policy and stale feature claims.
+- Fixed stale comments and documentation around statuses, `reads`, Delete key decoding and startup errors.
+- Added the 0.9.0 feature section to the correct CHANGELOG section.
 
 ### 0.9.0
 - Raised Ansiform to 1.0 and adopted `promptWithInitial` in the edit forms.

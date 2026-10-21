@@ -1,0 +1,71 @@
+name: Hackage
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to upload, for example v0.9.1"
+        required: true
+        type: string
+      mode:
+        description: "Upload a candidate or publish an approved candidate"
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - publish
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: ${{ inputs.mode }} ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    environment: hackage
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Validate tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$(git rev-parse HEAD)"
+          version="${RELEASE_TAG#v}"
+          package_version="$(sed -n 's/^version:[[:space:]]*//p' ansido.cabal | head -1 | tr -d '[:space:]')"
+          test "$version" = "$package_version"
+      - name: Set up GHC and Cabal
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.14.1"
+          cabal-version: "latest"
+      - name: Update package index
+        run: cabal update
+      - name: Verify package
+        run: |
+          cabal build all --enable-tests
+          cabal test all
+          cabal check
+          cabal sdist
+      - name: Upload to Hackage
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          MODE: ${{ inputs.mode }}
+          HACKAGE_TOKEN: ${{ secrets.HACKAGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          tarball="dist-newstyle/sdist/ansido-${version}.tar.gz"
+          test -f "$tarball"
+          if [ "$MODE" = "publish" ]; then
+            cabal upload --publish -t "$HACKAGE_TOKEN" "$tarball"
+          else
+            cabal upload -t "$HACKAGE_TOKEN" "$tarball"
+          fi

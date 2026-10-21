@@ -84,7 +84,7 @@ data Category = Category
   , categoryName :: CategoryName
   } deriving (Eq, Show)
 
--- | The three columns of the board.
+-- | The three statuses of the board.
 data Status = Todo | Doing | Done
   deriving (Eq, Ord, Show)
 
@@ -126,7 +126,7 @@ statusFromKey key =
     "done"  -> Just Done
     _       -> Nothing
 
--- | The next status in the cycle used by the state key.
+-- | The next status in the cycle used by the status key.
 nextStatus :: Status -> Status
 nextStatus Todo  = Doing
 nextStatus Doing = Done

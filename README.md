@@ -19,11 +19,11 @@ PVP, single-sourced from the `ansido.cabal` file.
 
 ## Goal
 
-`ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, groups, styles, immediate input, forms, line input and redraw.
+`ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, styles, immediate input, forms, line input and redraw.
 
 ## Status
 
-Version 0.9.0 is functional. It includes:
+The application is functional. It includes:
 
 - Task category creation, selection, editing and deletion.
 - Arrow, `j`/`k` and `w`/`s` navigation on the category screen, with `Enter` opening the board.
@@ -39,7 +39,7 @@ Version 0.9.0 is functional. It includes:
 - Plain text persistence with errors as data.
 - Linux, macOS and Windows builds, checked by GitHub Actions.
 - Release binaries for all three systems on GitHub Releases.
-- `R` to redraw and `X` to exit.
+- `r` to redraw and `x` to exit.
 
 The application always starts on the category screen.
 
@@ -51,10 +51,14 @@ cabal build all
 cabal run ansido
 ```
 
-The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use another path:
+The data file defaults to `.ansido/board.tsv` in the user home directory. On Unix that is `$HOME/.ansido/board.tsv`; on Windows it is the profile directory, such as `C:\Users\<name>\.ansido\board.tsv`. Set `ANSIDO_FILE` to use another path:
 
 ```sh
 ANSIDO_FILE=./workspace.tsv cabal run ansido
+```
+
+```powershell
+$env:ANSIDO_FILE = ".\workspace.tsv"; cabal run ansido
 ```
 
 The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks. The edit forms open with the current values pre-filled, so only the changed part has to be retyped.
@@ -73,7 +77,7 @@ Pre-built binaries for Linux, macOS and Windows are attached to each GitHub rele
 ## Design principles
 
 - Immutable state; every action returns a new state.
-- Pure core for task transitions, sorting and filtering.
+- Pure core for task transitions and filtering.
 - IO only at the edges: input, drawing and persistence.
 - Errors as data; no exceptions for invalid input.
 - Reusable components for the header, footer, table and task rows.

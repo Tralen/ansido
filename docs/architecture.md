@@ -31,7 +31,7 @@ graph TD
     Components --> Domain
     Theme --> Domain
     Persistence --> Domain
-    Version --> Paths
+    Version --> Paths_ansido
 ```
 
 The arrows point toward the modules being used. No UI module writes files, and no domain module performs IO.

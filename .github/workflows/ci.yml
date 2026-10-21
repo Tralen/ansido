@@ -6,26 +6,71 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: ${{ matrix.os }}
+    name: GHC ${{ matrix.ghc }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15, windows-latest]
+        include:
+          - os: ubuntu-latest
+            ghc: "9.2.8"
+          - os: ubuntu-latest
+            ghc: "9.14.1"
+          - os: macos-15-intel
+            ghc: "9.2.8"
+          - os: macos-15
+            ghc: "9.14.1"
+          - os: windows-latest
+            ghc: "9.14.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up GHC and Cabal
         uses: haskell-actions/setup@v2
         with:
-          ghc-version: "9.14.1"
+          ghc-version: ${{ matrix.ghc }}
           cabal-version: "latest"
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/packages
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-ghc-${{ matrix.ghc }}-${{ hashFiles('**/*.cabal', 'cabal.project', 'cabal.project.freeze') }}
+          restore-keys: |
+            ${{ runner.os }}-ghc-${{ matrix.ghc }}-
       - name: Update package index
         run: cabal update
       - name: Build
-        run: cabal build all
+        run: cabal build all --enable-tests
       - name: Test
         run: cabal test all
+      - name: Check package
+        run: cabal check
+      - name: Build sdist
+        run: cabal sdist
+
+  privacy:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          version=8.30.1
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+      - name: Scan history and worktree
+        run: |
+          gitleaks detect --source . --redact --no-banner --log-opts=--all --verbose
+          gitleaks detect --source . --no-git --redact --no-banner --verbose

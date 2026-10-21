@@ -50,7 +50,7 @@ task	4	2	todo	Buy coffee	Personal errand.
 
 ## Parsing
 
-`decodeWorkspace` is pure and returns `Either PersistenceError Workspace`. It checks the header, parses identifiers and status keys without using `read`, validates names, titles and notes through the domain smart constructors and finally calls `mkWorkspace` to enforce referential integrity. Carriage returns are removed before splitting the lines, so files written or copied on Windows parse the same way on every platform.
+`decodeWorkspace` is pure and returns `Either PersistenceError Workspace`. It checks the header, parses identifiers with `reads` so malformed input cannot crash, parses status keys, validates names, titles and notes through the domain smart constructors and finally calls `mkWorkspace` to enforce referential integrity. Carriage returns are removed before splitting the lines, so files written or copied on Windows parse the same way on every platform.
 
 Version 1 files are still accepted. A version 1 task has no note field, so its note becomes empty. Version 2 files require the note field, even when it is empty.
 
@@ -68,7 +68,7 @@ A missing file is treated as an empty workspace, not as an error. An empty file 
 
 `saveWorkspace` writes to `<path>.tmp` and then renames it over the target. `renameFile` replaces an existing destination on every supported platform and is atomic on POSIX; on Windows it uses `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING`. The parent directory is created when needed.
 
-Files are read and written as UTF-8 and newline translation is disabled, so the board keeps Unix line endings and non-ASCII text on every platform. File system exceptions are caught at the edge and converted to `ReadFailed` or `WriteFailed`. The application never throws from its own code.
+Files are read and written as UTF-8 and newline translation is disabled, so the board keeps Unix line endings and non-ASCII text on every platform. File system exceptions are caught at the edge and converted to `ReadFailed` or `WriteFailed`. The application does not throw for domain or input errors; a startup failure prints a message and exits with a failure code.
 
 ## Compatibility
 

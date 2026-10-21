@@ -27,7 +27,7 @@ import           Ansido.Ui.Theme
 data NoticeKind = NoticeInfo | NoticeError
   deriving (Eq, Show)
 
--- | A short message with a severity.
+-- | A short message with a severity, shown below the screen body.
 data Notice = Notice
   { noticeKind :: NoticeKind
   , noticeText :: String

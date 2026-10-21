@@ -2,7 +2,8 @@
 
 ## Requirements
 
-- GHC 9.14.1, the version used for the current release.
+- GHC 9.14.1, the primary version used for the current release.
+- GHC 9.2.8 is also covered by CI to keep the lower `base` bound honest.
 - `cabal-install` 3.18 or newer.
 - Ansiform 1.0.0 from Hackage.
 
@@ -19,6 +20,12 @@ Use a separate data file while developing:
 
 ```sh
 ANSIDO_FILE=./scratch/board.tsv cabal run ansido
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:ANSIDO_FILE = ".\scratch\board.tsv"; cabal run ansido
 ```
 
 ## Tests
@@ -41,6 +48,21 @@ The current suite has 43 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 
+## Checks
+
+Run these before preparing a release:
+
+```sh
+cabal build all --enable-tests
+cabal test all
+cabal check
+cabal sdist
+cabal haddock --haddock-for-hackage
+hlint src test app
+```
+
+`hlint` reports style hints and is not a gate. Install the Git hook once with `pre-commit install`; the gitleaks hook scans staged changes. CI scans the full history and the worktree with gitleaks through the `privacy` job.
+
 ## Cross-platform
 
 The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all` and `cabal test all` on all three systems through `.github/workflows/ci.yml`.
@@ -51,25 +73,53 @@ The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-late
 - Board files are UTF-8 with Unix line endings on every platform. Reading also accepts CRLF files.
 - `saveWorkspace` relies on `renameFile`, which already replaces an existing board on Windows.
 - `app/Main.hs` sets the standard handles to UTF-8, so the arrows, the backspace icon and non-ASCII task text render on the Windows console.
-- Arrow keys depend on the terminal sending ANSI escape sequences. Windows Terminal and modern consoles do; on a console that does not, use `j`/`k` or `w`/`s` for vertical navigation. Letter keys, Enter, Backspace, Space and Delete are decoded from plain characters and work everywhere.
+- Arrow keys depend on the terminal sending ANSI escape sequences. Windows Terminal and modern consoles do; on a console that does not, use `j`/`k` or `w`/`s` for vertical navigation. Letter keys, Enter, Backspace and Space are decoded from plain characters and work everywhere; arrows and Delete depend on the escape sequences.
 
 ## Releases
 
-Pushing a tag that starts with `v` triggers `.github/workflows/release.yml`. The workflow builds the executable on Linux, macOS and Windows, packages the binary with the README, LICENSE and CHANGELOG, and attaches the archives to a GitHub release with generated notes.
+Publishing is manual. CI only builds and tests.
+
+### GitHub release
+
+1. Confirm that the version in `ansido.cabal` matches the tag you are about to create, and that `CHANGELOG.md` has an entry for it.
+2. Run `cabal check`, `cabal test all`, `cabal sdist` and `cabal haddock --haddock-for-hackage` locally.
+3. Create an annotated tag with `git tag -a v<version> -m "ansido <version>"` and push it. The project has no signing key configured, so tags are annotated rather than signed.
+4. Run the `Release` workflow manually (`workflow_dispatch`) with the tag as input. The `release` environment gates the publish job. The workflow validates the tag against `ansido.cabal`, builds the executable on Linux, macOS and Windows, generates `SHA256SUMS`, attests build provenance and attaches the archives to the GitHub release.
 
 Asset names follow `ansido-<version>-<os>-<arch>`. Linux and macOS use `.tar.gz`; Windows uses `.zip`. The Linux binary is built on Ubuntu 22.04 for a broader glibc range, and the macOS binary is built on `macos-15` for arm64.
 
+### Hackage release
+
+1. Upload a candidate first and inspect it on Hackage:
+
+   ```sh
+   cabal sdist
+   cabal upload -t "$HACKAGE_TOKEN" dist-newstyle/sdist/ansido-<version>.tar.gz
+   ```
+
+2. Wait for the candidate to be reviewed.
+3. Publish the same tarball only after approval:
+
+   ```sh
+   cabal upload --publish -t "$HACKAGE_TOKEN" dist-newstyle/sdist/ansido-<version>.tar.gz
+   ```
+
+4. Optionally upload the documentation with `cabal upload -d --publish -t "$HACKAGE_TOKEN"`.
+
+The `Hackage` workflow is a manual `workflow_dispatch` alternative that uses the `hackage` environment. It never runs on push or tag, so a candidate is always created before publication. The environment must define `HACKAGE_TOKEN` as an environment secret; the GitHub `release` environment gates the publish job.
+
 ## Versioning
 
-The application follows semantic versioning. The version is single sourced from the `version` field in `ansido.cabal`. `Ansido.Version` reads it through the generated `Paths_ansido` module, so the interface never hardcodes a version string.
+The application follows PVP, single-sourced from the `version` field in `ansido.cabal`. `Ansido.Version` reads it through the generated `Paths_ansido` module, so the interface never hardcodes a version string.
 
 Bump rules:
 
-- Patch for fixes and small refinements.
+- Patch for fixes and minor refinements.
 - Minor for new user-facing features or screens.
-- Major for data model breaking changes or major milestones.
+- Major 2 for data model breaking changes.
+- Major 1 for major release milestones.
 
-Every release is recorded in `CHANGELOG.md`, in the section that matches the size of the change. Commit messages start with the version.
+Every release is recorded in `CHANGELOG.md`, in the section that matches the size of the change. Feature releases go under Version History; patches and refinements go under Revision History. Commit messages start with the version.
 
 ## Adding a screen
 
@@ -93,7 +143,7 @@ Keep the dependency footprint small. The application currently uses `base`, `ans
 - No `any` or `unknown` equivalents; model states with algebraic data types.
 - Use newtypes for identifiers and validated text.
 - Code, comments and file names are in English.
-- Comments end with a period.
+- Comments end with a period and use commas or semicolons instead of em dashes.
 
 ## Cabal notes
 

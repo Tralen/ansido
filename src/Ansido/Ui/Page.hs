@@ -491,7 +491,7 @@ footerHints theme screen =
       ]
     AddTaskScreen ->
       [ keyHintText theme "Enter" "confirm"
-      , keyHintText theme "empty" "cancel"
+      , keyHintText theme "empty title" "cancels"
       ]
     AddCategoryScreen ->
       [ keyHintText theme "Enter" "confirm"

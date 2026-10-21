@@ -6,3 +6,6 @@ REGRESSION.md
 .handoff/
 dist-newstyle/
 cabal.project.local
+.secrets*
+.env
+.env.*

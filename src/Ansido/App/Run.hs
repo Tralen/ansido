@@ -152,43 +152,35 @@ startTaskInput path state =
     Right app ->
       case uiScreen (appUi app) of
         AddTaskScreen -> do
-          drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
-          titleInput <- readLineAt 2 (formNumber taskTitlePromptColumn)
-          case titleInput of
-            Nothing -> leaveInput app drawing
-            Just rawTitle
+          let (formPage, prompts) = renderTaskForm defaultUiTheme app
+          (drawing, result) <- readForm formPage prompts (loopDraw state)
+          case result of
+            Left _ -> leaveInput app drawing
+            Right [rawTitle, rawContent]
               | all isSpace rawTitle -> leaveInput app drawing
-              | otherwise -> askContent path app drawing rawTitle
+              | otherwise ->
+                  applyAction path (LoopState app drawing)
+                    (SubmitTask rawTitle rawContent)
+            Right _ -> leaveInput app drawing
         _ -> do
           drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
           pure (Continue (LoopState app drawing))
-
-askContent :: FilePath -> AppState -> Draw.State -> String -> IO Step
-askContent path app drawing rawTitle = do
-  contentInput <- readLineAt 0 (formNumber taskContentPromptColumn)
-  case contentInput of
-    Nothing -> leaveInput app drawing
-    Just rawContent ->
-      applyAction path (LoopState app drawing)
-        (SubmitTask rawTitle rawContent)
 
 startCategoryInput :: FilePath -> LoopState -> IO Step
 startCategoryInput path state =
   case update OpenAddCategory (loopApp state) of
     Left domainError -> reportFailure state domainError
     Right app -> do
-      drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
-      input <- readLineAt 1 (formNumber categoryPromptColumn)
-      continueWithInput path app drawing SubmitCategory input
-
-continueWithInput :: FilePath -> AppState -> Draw.State
-                 -> (String -> Action) -> Maybe String -> IO Step
-continueWithInput path app drawing toAction input =
-  case input of
-    Nothing -> leaveInput app drawing
-    Just value
-      | all isSpace value -> leaveInput app drawing
-      | otherwise -> applyAction path (LoopState app drawing) (toAction value)
+      let (formPage, prompts) = renderCategoryForm defaultUiTheme app
+      (drawing, result) <- readForm formPage prompts (loopDraw state)
+      case result of
+        Left _ -> leaveInput app drawing
+        Right [rawName]
+          | all isSpace rawName -> leaveInput app drawing
+          | otherwise ->
+              applyAction path (LoopState app drawing)
+                (SubmitCategory rawName)
+        Right _ -> leaveInput app drawing
 
 leaveInput :: AppState -> Draw.State -> IO Step
 leaveInput app drawing =

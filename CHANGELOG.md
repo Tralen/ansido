@@ -3,6 +3,14 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.5.0
+- Updated Ansiform to 0.7.9.0 and adopted `readForm` for the task and category forms.
+- Moved the help table one line up and added a blank line before the data file section.
+- Styled the `Data file` label as bold yellow without italic.
+- Moved the board notice directly below the table, with a blank line after it, so the table no longer shifts.
+- Updated the Ansiform notes: group padding, forms, checked number arithmetic and solid-printer documentation are now covered by the library.
+- Added a test for the task form prompt positions.
+
 ### 0.4.0
 - Added a `v view` screen that shows the full task note with word wrap.
 - Added the data file path to the help screen.

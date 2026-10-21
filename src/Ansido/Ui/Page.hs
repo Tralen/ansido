@@ -1,6 +1,8 @@
 -- | Pure rendering of every screen into Ansiform pages.
 module Ansido.Ui.Page
   ( renderPage
+  , renderTaskForm
+  , renderCategoryForm
   , boardWindowSize
   , Window (..)
   , windowAround
@@ -24,45 +26,88 @@ import           Ansido.Version (versionText)
 -- | Renders the current state as a page.
 renderPage :: UiTheme -> AppState -> Page
 renderPage theme app =
-  page (headerSections <> screenBody theme app <> [footer] <> promptSections)
+  page (pageChrome theme app <> promptSections theme app)
+
+-- | Renders a task form and returns the prompts read by 'readForm'.
+renderTaskForm :: UiTheme -> AppState -> (Page, [Prompt])
+renderTaskForm theme app =
+  ( page (before <> sections)
+  , prompts
+  )
   where
-    ui = appUi app
-    headerSections =
-      [ headerSection theme "ANSI DO!"
-          ("Terminal task manager, v" <> versionText)
-      , categorySection theme (uiCategory ui)
-          (workspaceCategories (appWorkspace app))
-      , sectionRule (rule '=' (themeRule (uiBase theme)))
+    before = pageChrome theme app
+    titleIndex = length before
+    contentIndex = titleIndex + 1
+    sections =
+      [ promptLine theme taskTitlePrompt
+      , promptLine theme taskContentPrompt
       ]
-    footer = footerSection theme (footerHints theme (uiScreen ui))
-    promptSections =
-      case uiScreen ui of
-        AddTaskScreen     ->
-          [ promptLine theme taskTitlePrompt
-          , promptLine theme taskContentPrompt
-          ]
-        AddCategoryScreen -> [promptLine theme categoryPrompt]
-        _                 -> []
+    prompts =
+      [ promptAt (formNumber titleIndex) 0
+          (formNumber taskTitlePromptColumn)
+      , promptAt (formNumber contentIndex) 0
+          (formNumber taskContentPromptColumn)
+      ]
+
+-- | Renders a category form and returns the prompt read by 'readForm'.
+renderCategoryForm :: UiTheme -> AppState -> (Page, [Prompt])
+renderCategoryForm theme app =
+  ( page (before <> sections)
+  , prompts
+  )
+  where
+    before = pageChrome theme app
+    promptIndex = length before
+    sections = [ promptLine theme categoryPrompt ]
+    prompts =
+      [ promptAt (formNumber promptIndex) 0
+          (formNumber categoryPromptColumn)
+      ]
+
+pageChrome :: UiTheme -> AppState -> [Section]
+pageChrome theme app =
+  [ headerSection theme "ANSI DO!"
+      ("Terminal task manager, v" <> versionText)
+  , categorySection theme (uiCategory (appUi app))
+      (workspaceCategories (appWorkspace app))
+  , sectionRule (rule '=' (themeRule (uiBase theme)))
+  ]
+    <> screenBody theme app
+    <> [ footerSection theme
+          (footerHints theme (uiScreen (appUi app))) ]
+
+promptSections :: UiTheme -> AppState -> [Section]
+promptSections theme app =
+  case uiScreen (appUi app) of
+    AddTaskScreen     ->
+      [ promptLine theme taskTitlePrompt
+      , promptLine theme taskContentPrompt
+      ]
+    AddCategoryScreen -> [ promptLine theme categoryPrompt ]
+    _                 -> []
 
 -- | Body of the current screen, followed by an optional notice.
 screenBody :: UiTheme -> AppState -> [Section]
 screenBody theme app =
-  body <> noticeSections theme app
-  where
-    body =
-      case uiScreen (appUi app) of
-        BoardScreen       -> boardBody theme app
-        DetailsScreen _   -> detailsBody theme app
-        HelpScreen        -> helpBody theme app
-        CategoryScreen    -> categoriesBody theme app
-        AddTaskScreen     -> boardBody theme app
-        AddCategoryScreen -> categoriesBody theme app
+  case uiScreen (appUi app) of
+    BoardScreen -> boardBody theme app
+    AddTaskScreen -> boardBody theme app
+    DetailsScreen _ -> detailsBody theme app <> noticeSections theme app
+    HelpScreen -> helpBody theme app <> noticeSections theme app
+    CategoryScreen -> categoriesBody theme app <> noticeSections theme app
+    AddCategoryScreen -> categoriesBody theme app <> noticeSections theme app
 
 noticeSections :: UiTheme -> AppState -> [Section]
 noticeSections theme app =
   case uiNotice (appUi app) of
     Nothing      -> []
     Just notice  -> [noticeSection theme notice]
+
+noticePrinters :: UiTheme -> AppState -> [Printer]
+noticePrinters theme app =
+  case uiNotice (appUi app) of
+    Nothing      -> []
+    Just notice  -> [noticePrinter theme notice]
 
 -- Board.
 --------------------------------------------------------------------------------
@@ -72,16 +117,20 @@ boardBody theme app
   | null (workspaceCategories (appWorkspace app)) =
       [ emptySection theme
           "Create a category first, press Backspace to open categories." ]
+        <> noticeSections theme app
   | null (visibleTasks app) =
       [ emptySection theme "No tasks yet, press Enter to add one." ]
+        <> noticeSections theme app
   | otherwise =
       [ boardTableSection theme app ]
 
 boardTableSection :: UiTheme -> AppState -> Section
 boardTableSection theme app =
   sectionBody 1
-    [ printerTableBordered BordersLight boardTableFormat 1 1
-        (boardTable theme app) ]
+    ( [ printerTableBordered BordersLight boardTableFormat 1 1
+          (boardTable theme app) ]
+        <> noticePrinters theme app
+    )
 
 -- | Title, note and state columns, with the note as the main field.
 boardTableFormat :: TableFormat
@@ -196,10 +245,12 @@ categoryNameFor workspace identifier =
 helpBody :: UiTheme -> AppState -> [Section]
 helpBody theme app =
   [ titleSection theme "Help"
-  , sectionBody 1
+  , sectionTop 1
       [ printerTableBordered BordersLight defaultTableFormat 1 1
           (helpTable theme)
-      , printerLeft 1 (blockSimple "Data file:" (themeMuted base))
+      , printerEmpty 1
+      , printerLeft 1
+          (blockSimple "Data file:" (themeTableHeader base))
       , printerParagraph 3 0
           [ blockSimple (dataFilePath app) (themeTableBody base) ]
       ]

@@ -4,13 +4,18 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import           System.Exit (exitFailure)
 
+import           Ansiform (formNumber, promptColumn, promptRow, promptSection)
+
 import           Ansido.App.Command (Command (..), Key (..), commandForKey)
 import           Ansido.App.State
 import           Ansido.App.Update (backAction, update)
 import           Ansido.Domain
 import           Ansido.Persistence
 import           Ansido.Ui.Components (Notice (..), NoticeKind (..))
-import           Ansido.Ui.Page (Window (..), windowAround)
+import           Ansido.Ui.Page (Window (..), renderTaskForm,
+                                 taskContentPromptColumn, taskTitlePromptColumn,
+                                 windowAround)
+import           Ansido.Ui.Theme (defaultUiTheme)
 
 -- Harness.
 --------------------------------------------------------------------------------
@@ -93,6 +98,7 @@ tests =
   , testSelectUnknownCategory
   , testAddTaskWithoutCategory
   , testOpenDetails
+  , testTaskFormPrompts
   , testArrowKeys
   , testBackActions
   ]
@@ -385,6 +391,28 @@ testOpenDetails =
       checkEqual "details screen" (DetailsScreen (TaskId 1))
         (uiScreen (appUi details))
       checkEqual "data file" "board.tsv" (appDataFile details)
+  )
+
+testTaskFormPrompts :: (String, Check)
+testTaskFormPrompts =
+  ( "task form prompts"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      let app = withDataFile "board.tsv" (initialAppState workspace)
+      board <- rightOr (update (SelectCategory (categoryId category)) app)
+      formApp <- rightOr (update OpenAddTask board)
+      case snd (renderTaskForm defaultUiTheme formApp) of
+        [titlePrompt, contentPrompt] -> do
+          checkEqual "title row" 0 (promptRow titlePrompt)
+          checkEqual "content row" 0 (promptRow contentPrompt)
+          checkEqual "title column" (formNumber taskTitlePromptColumn)
+            (promptColumn titlePrompt)
+          checkEqual "content column" (formNumber taskContentPromptColumn)
+            (promptColumn contentPrompt)
+          checkEqual "consecutive sections"
+            (promptSection titlePrompt + 1) (promptSection contentPrompt)
+        _ -> Left "unexpected prompt count"
   )
 
 testArrowKeys :: (String, Check)

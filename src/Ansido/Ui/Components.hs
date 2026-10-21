@@ -10,6 +10,7 @@ module Ansido.Ui.Components
   , titleSection
   , categorySection
   , noticeSection
+  , noticePrinter
   , emptySection
   , keyHint
   , keyHintText
@@ -78,8 +79,12 @@ categorySection theme active categories =
 
 -- | Message shown above the body of a screen.
 noticeSection :: UiTheme -> Notice -> Section
-noticeSection theme notice =
-  section [ printerLeft 1 (blockCycle [(marker, style), (" " <> text, style)]) ]
+noticeSection theme notice = section [noticePrinter theme notice]
+
+-- | Printer for a single notice line.
+noticePrinter :: UiTheme -> Notice -> Printer
+noticePrinter theme notice =
+  printerLeft 1 (blockCycle [(marker, style), (" " <> text, style)])
   where
     marker = case noticeKind notice of
       NoticeInfo  -> "i"

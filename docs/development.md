@@ -4,7 +4,7 @@
 
 - GHC 9.14.1, the version used for the current release.
 - `cabal-install` 3.18 or newer.
-- Ansiform 0.7.8.5 from Hackage.
+- Ansiform 0.7.9.0 from Hackage.
 
 ## Commands
 
@@ -32,8 +32,9 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Window slicing.
 - Arrow and Enter/Backspace/Space key mapping and back navigation.
 - Initial state on the category screen, vertical navigation, status cycling, details, submit and select actions.
+- Data file path propagation through `withDataFile`.
 
-The current suite has 28 tests.
+The current suite has 29 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 
@@ -55,7 +56,7 @@ Every release is recorded in `CHANGELOG.md`, in the section that matches the siz
 2. Add the rendering branch in `Ansido.Ui.Page.screenBody` and the footer hints in `footerHints`.
 3. Add an `Action` when the screen changes the state, and handle it in `Ansido.App.Update.update`.
 4. Map the relevant keys in `Ansido.App.Command.commandForKey`, including arrows when the screen supports them.
-5. Thread any new input through `Ansido.App.Run`, keeping the `readLineAt` line offset in sync with the number of prompt lines.
+5. Thread any new input through `Ansido.App.Run`, using `readForm` with prompts built from the page sections instead of counting lines.
 6. Add tests for the pure update and any new pure helper.
 7. Document the screen and keys in `docs/interface.md`.
 

@@ -71,7 +71,7 @@ The page is composed of:
 9. A solid footer bar.
 10. One or two optional prompt lines.
 
-Notices are rendered after the screen body, so a state change or a task message does not move the task table. The category screen has no title: after the rule and a blank line, the category table starts directly.
+Notices are embedded immediately below the board table, with a blank line after the notice, so a state change or a task message does not move the table. The category screen has no title: after the rule and a blank line, the category table starts directly. The help table starts one line below the `Help` title, and a blank line separates it from the `Data file` label.
 
 The board is a single bordered table with three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green.
 
@@ -85,9 +85,9 @@ The task table shows at most ten tasks. The visible window follows the selection
 
 ## Text input
 
-Prompts are drawn as the last sections of the page. For a new task, the title prompt is two lines above the final cursor position, so the runner calls `readLineAt 2`. After the title is confirmed, the cursor sits on the note prompt line, so the runner calls `readLineAt 0`. For a category, the single prompt is one line above the final cursor position, so the runner calls `readLineAt 1`.
+The task and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables line input once for the whole form and returns the updated `Draw.State` with the typed values.
 
-`readLineAt` already wraps `withLineInput`, so it must not be wrapped again. After the last `Enter`, the cursor sits one line below the last prompt, matching the line count tracked by `Draw.State`.
+The task form has two prompts, title and note. The category form has one prompt. Empty task title input cancels the form, while an empty note is accepted.
 
 ## Key decoding
 
@@ -97,7 +97,7 @@ Immediate input returns one character at a time. Arrow keys arrive as ANSI escap
 
 `UiTheme` wraps the Ansiform `Theme` and adds semantic styles for Todo, Doing, Done, selection and notices. Status colors are red for Todo, cyan for Doing and green for Done. The header and footer use a blue bar with white text.
 
-Muted text is white italic, used for labels, inactive category tabs, empty placeholders and hidden-row markers. The muted gray color is reserved for horizontal rules. The selected row uses bold white, while normal table text uses vivid white.
+Muted text is white italic, used for labels, inactive category tabs, empty placeholders and hidden-row markers. The muted gray color is reserved for horizontal rules. The selected row uses bold white, while normal table text uses vivid white. The `Data file` label uses the bold yellow table-header style; the path below it is normal text and wraps when long.
 
 ## Terminal behavior
 

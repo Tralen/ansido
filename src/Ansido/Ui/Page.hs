@@ -46,7 +46,7 @@ renderTaskForm theme app =
     hintSections =
       if editMode
         then [ section [ printerLeft 2
-                 (blockSimple "Empty input keeps the current value."
+                 (blockSimple "Edit the value and press Enter."
                     (themeMuted (uiBase theme))) ] ]
         else []
     titleIndex = length before + length hintSections
@@ -55,12 +55,21 @@ renderTaskForm theme app =
       [ promptLine theme taskTitlePrompt
       , promptLine theme taskContentPrompt
       ]
+    task = case uiScreen (appUi app) of
+      EditTaskScreen identifier -> findTask identifier (appWorkspace app)
+      _                         -> Nothing
+    initialTitle = taskTitleText . taskTitle <$> task
+    initialContent = taskContentText . taskContent <$> task
     prompts =
-      [ promptAt (formNumber titleIndex) 0
-          (formNumber taskTitlePromptColumn)
-      , promptAt (formNumber contentIndex) 0
-          (formNumber taskContentPromptColumn)
+      [ promptFor (formNumber titleIndex) (formNumber taskTitlePromptColumn)
+          initialTitle
+      , promptFor (formNumber contentIndex) (formNumber taskContentPromptColumn)
+          initialContent
       ]
+    promptFor sectionIndex column initial =
+      case initial of
+        Nothing    -> promptAt sectionIndex 0 column
+        Just value -> promptWithInitial sectionIndex 0 column value
 
 -- | Renders a category form and returns the prompt read by 'readForm'.
 renderCategoryForm :: UiTheme -> AppState -> (Page, [Prompt])
@@ -77,14 +86,20 @@ renderCategoryForm theme app =
     hintSections =
       if editMode
         then [ section [ printerLeft 2
-                 (blockSimple "Empty input keeps the current value."
+                 (blockSimple "Edit the value and press Enter."
                     (themeMuted (uiBase theme))) ] ]
         else []
     promptIndex = length before + length hintSections
     sections = [ promptLine theme categoryPrompt ]
+    initialName
+      | editMode = categoryNameText . categoryName <$> currentCategory app
+      | otherwise = Nothing
     prompts =
-      [ promptAt (formNumber promptIndex) 0
-          (formNumber categoryPromptColumn)
+      [ case initialName of
+          Nothing    -> promptAt (formNumber promptIndex) 0
+                          (formNumber categoryPromptColumn)
+          Just value -> promptWithInitial (formNumber promptIndex) 0
+                          (formNumber categoryPromptColumn) value
       ]
 
 pageChrome :: UiTheme -> AppState -> [Section]

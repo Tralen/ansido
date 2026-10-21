@@ -47,9 +47,9 @@ The footer shows the arrow keys without a label, followed by `Enter add`, `Space
 
 ### Edit task
 
-The edit screen reuses the task form and shows the current title, status, category and note above the prompts. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
+The edit screen reuses the task form and shows the current title, status, category and note above the prompts. The title and note prompts open with the current values, so only the part that needs to change has to be edited. Enter submits after the note prompt, and the board returns with a confirmation notice. An empty title is rejected; an empty note clears the note.
 
-Ansiform forms read complete lines, so the current value is shown above the prompts rather than as an editable pre-filled buffer. Empty input means "keep current".
+Ansiform 1.0 provides the line editor behind `promptWithInitial`, so the current value is an editable buffer instead of a hint above an empty field.
 
 ### Categories
 
@@ -63,7 +63,7 @@ Moving the highlight resets the task row so the next board opens on its first ta
 
 ### Edit category
 
-The edit screen reuses the category form and shows the current name and task count above the prompt. Type a new name or press `Enter` to keep the current one. An empty name keeps the current name. The edit is submitted after the prompt, and the category screen returns with a confirmation notice.
+The edit screen reuses the category form and shows the current name and task count above the prompt. The name prompt opens with the current name. Enter submits the value and the category screen returns with a confirmation notice. An empty name is rejected.
 
 ### Help
 
@@ -75,7 +75,7 @@ The back key follows the screen hierarchy: details and task edit return to the b
 
 ### Prompts
 
-The create form has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the create prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection. In edit mode, both forms add a hint line saying that empty input keeps the current value.
+The create form has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the create prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection. In edit mode, both forms open their prompts with the current values and show the hint line `Edit the value and press Enter.`; clearing the title or category name is rejected, and clearing the task note removes it.
 
 Input is validated by the domain smart constructors, so an overlong title, an overlong note or a text with control characters becomes a notice instead of a broken record.
 
@@ -114,9 +114,9 @@ The task table shows at most ten tasks. The visible window follows the selection
 
 ## Text input
 
-The create, edit and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables line input once for the whole form and returns the updated `Draw.State` with the typed values.
+The create, edit and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables the editor once for the whole form and returns the updated `Draw.State` with the typed values. Edit forms build their prompts with `promptWithInitial`, so the current value is the editable buffer; create forms use `promptAt`.
 
-The task form has two prompts, title and note. The category form has one prompt. In edit mode, the form adds a hint line before the prompts saying that empty input keeps the current value, and the prompt indices account for that extra section.
+The task form has two prompts, title and note. The category form has one prompt. In edit mode, the form adds a hint line before the prompts and the prompt indices account for that extra section.
 
 ## Key decoding
 

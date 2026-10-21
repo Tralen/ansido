@@ -81,6 +81,14 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.9.0
+- Raised Ansiform to 1.0 and adopted `promptWithInitial` in the edit forms.
+- Edit task and edit category now open their prompts with the current title, note and name, so only the changed part has to be retyped.
+- Empty input no longer means "keep current": an empty title or category name is rejected, while an empty task note clears the note.
+- Replaced the edit hint `Empty input keeps the current value.` with `Edit the value and press Enter.`.
+- Rewrote `docs/ansiform-form-defaults.md` to describe the implemented Ansiform API and its use in ansido.
+- Added prompt tests for the initial values in the edit forms.
+
 ### 0.8.2
 - Made the data file portable: `ANSIDO_FILE` first, then `getHomeDirectory`, which works on Windows without `HOME`.
 - Board files are now read and written as UTF-8 without newline translation; decoding also accepts CRLF files.

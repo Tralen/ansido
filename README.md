@@ -10,7 +10,7 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.8.2 is functional. It includes:
+Version 0.9.0 is functional. It includes:
 
 - Task category creation, selection, editing and deletion.
 - Arrow, `j`/`k` and `w`/`s` navigation on the category screen, with `Enter` opening the board.
@@ -18,13 +18,14 @@ Version 0.8.2 is functional. It includes:
 - Vertical navigation with arrow keys, `j` and `k`, or `w` and `s`.
 - A status filter that cycles through all, Todo, Doing and Done.
 - `Enter` to add a task and `Space` to cycle the selected task status.
-- `e` to edit the selected task or category.
+- `e` to edit the selected task or category, with the current values pre-filled in the form.
 - `v` to view the full note with word wrap.
 - `Backspace` to go back and `Del` to delete tasks and categories.
 - A help page with the data file path.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
 - Linux, macOS and Windows builds, checked by GitHub Actions.
+- Release binaries for all three systems on GitHub Releases.
 - `R` to redraw and `X` to exit.
 
 The application always starts on the category screen.
@@ -43,7 +44,9 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks.
+The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks. The edit forms open with the current values pre-filled, so only the changed part has to be retyped.
+
+Pre-built binaries for Linux, macOS and Windows are attached to each GitHub release.
 
 ## Documentation
 
@@ -52,7 +55,7 @@ The application opens on the category screen. Press `n` to create the first cate
 - [Persistence](https://github.com/Tralen/ansido/blob/main/docs/persistence.md): file format, validation and atomic saving.
 - [Interface](https://github.com/Tralen/ansido/blob/main/docs/interface.md): screens, keys, layout, theming and input.
 - [Development](https://github.com/Tralen/ansido/blob/main/docs/development.md): build, tests, versioning and contribution rules.
-- [Ansiform form defaults](https://github.com/Tralen/ansido/blob/main/docs/ansiform-form-defaults.md): API proposal for editable pre-filled form fields.
+- [Ansiform form initial values](https://github.com/Tralen/ansido/blob/main/docs/ansiform-form-defaults.md): editable pre-filled form fields and how ansido uses them.
 
 ## Design principles
 

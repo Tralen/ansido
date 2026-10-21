@@ -4,7 +4,8 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import           System.Exit (exitFailure)
 
-import           Ansiform (formNumber, promptColumn, promptRow, promptSection)
+import           Ansiform (formNumber, promptColumn, promptInitial, promptRow,
+                           promptSection)
 
 import           Ansido.App.Command (Command (..), Key (..), commandForKey)
 import           Ansido.App.State
@@ -102,7 +103,7 @@ tests =
   , testCycleStatus
   , testFilter
   , testEditTask
-  , testEditBlankKeeps
+  , testEditValues
   , testMoveRow
   , testMoveCategory
   , testSubmitTask
@@ -272,11 +273,9 @@ testSubmitCategoryEdit =
       checkEqual "category screen" CategoryScreen (uiScreen (appUi renamed))
       checkEqual "selection kept" (Just (categoryId category))
         (uiCategory (appUi renamed))
-      kept <- rightOr (update (SubmitCategoryEdit (categoryId category) "   ")
-                               (initialAppState workspace))
-      checkEqual "blank keeps name" (Just "Work")
-        (categoryNameText . categoryName
-          <$> findCategory (categoryId category) (appWorkspace kept))
+      check "empty name rejected"
+        (isLeft (update (SubmitCategoryEdit (categoryId category) "   ")
+                        (initialAppState workspace)))
   )
 
 testDeleteSelectedCategory :: (String, Check)
@@ -481,24 +480,24 @@ testEditTask =
         (isLeft (editTask (TaskId 99) title content workspace))
   )
 
-testEditBlankKeeps :: (String, Check)
-testEditBlankKeeps =
-  ( "edit blank keeps the current value"
+testEditValues :: (String, Check)
+testEditValues =
+  ( "edit task values"
   , do
       category <- fixtureCategory
       workspace <- fixtureWorkspace
       board <- rightOr (update (SelectCategory (categoryId category))
                                 (initialAppState workspace))
-      kept <- rightOr (update (SubmitEdit (TaskId 1) "" "") board)
-      checkEqual "title kept" (Just "Write docs")
-        (taskTitleText . taskTitle <$> findTask (TaskId 1) (appWorkspace kept))
-      checkEqual "content kept" (Just "First note")
-        (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace kept))
       changed <- rightOr (update (SubmitEdit (TaskId 1) "New" "New note") board)
       checkEqual "title changed" (Just "New")
         (taskTitleText . taskTitle <$> findTask (TaskId 1) (appWorkspace changed))
       checkEqual "content changed" (Just "New note")
         (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace changed))
+      cleared <- rightOr (update (SubmitEdit (TaskId 1) "New" "") board)
+      checkEqual "note cleared" (Just "")
+        (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace cleared))
+      check "empty title rejected"
+        (isLeft (update (SubmitEdit (TaskId 1) "" "Note") board))
   )
 
 testMoveRow :: (String, Check)
@@ -620,7 +619,19 @@ testTaskFormPrompts =
             (promptColumn contentPrompt)
           checkEqual "consecutive sections"
             (promptSection titlePrompt + 1) (promptSection contentPrompt)
+          checkEqual "title has no initial value" Nothing
+            (promptInitial titlePrompt)
+          checkEqual "content has no initial value" Nothing
+            (promptInitial contentPrompt)
         _ -> Left "unexpected prompt count"
+      editApp <- rightOr (update OpenEditTask board)
+      case snd (renderTaskForm defaultUiTheme editApp) of
+        [titlePrompt, contentPrompt] -> do
+          checkEqual "edit title initial" (Just "Write docs")
+            (promptInitial titlePrompt)
+          checkEqual "edit content initial" (Just "First note")
+            (promptInitial contentPrompt)
+        _ -> Left "unexpected edit prompt count"
   )
 
 testCategoryFormPrompts :: (String, Check)
@@ -642,6 +653,10 @@ testCategoryFormPrompts =
             (promptColumn editPrompt)
           checkEqual "edit prompt below the hint"
             (promptSection addPrompt + 1) (promptSection editPrompt)
+          checkEqual "add has no initial value" Nothing
+            (promptInitial addPrompt)
+          checkEqual "edit initial name" (Just "Work")
+            (promptInitial editPrompt)
         _ -> Left "unexpected prompt count"
   )
 

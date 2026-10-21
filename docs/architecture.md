@@ -62,7 +62,7 @@ The header, footer, category bar, notices, key hints and prompt lines live in `A
 
 ## Ansiform notes
 
-The project now uses Ansiform 0.7.10.3. It fits the application well: the split between pure builders and the drawing layer keeps pages testable, `Maybe Table` makes malformed tables explicit as data, and the `Theme` record and solid bars make the chrome consistent across screens.
+The project now uses Ansiform 1.0.0. It fits the application well: the split between pure builders and the drawing layer keeps pages testable, `Maybe Table` makes malformed tables explicit as data, and the `Theme` record and solid bars make the chrome consistent across screens.
 
 The friction points found while building against 0.7.8.5 are resolved or clarified in 0.7.9.0 and later:
 
@@ -72,9 +72,8 @@ The friction points found while building against 0.7.8.5 are resolved or clarifi
 - The `readLineAt` documentation now warns that it already wraps `withLineInput`.
 - `addNumber`, `subtractNumber` and `subtractNumberMaybe` make non-negative arithmetic explicit. The application does not subtract `Number` values, but checked subtraction is available when needed.
 - Tables still truncate cells instead of wrapping them. The details screen uses `printerParagraph` to show the full note with word wrap, which is the right primitive for long text.
-- Ansiform 0.7.10.3 gives `BordersNone` a true borderless table layout: every column stays on one row, with no border characters, no horizontal separators and no column bands. The application uses `printerTableBordered BordersNone` for the board, help and category tables. Cells are still padded to fixed widths with `textWidth` and `truncateVisible`, but the custom row renderer was removed.
-
-The proposed API for editable form fields with initial values is documented in [Ansiform form defaults](ansiform-form-defaults.md).
+- Ansiform 0.7.10.3 gave `BordersNone` a true borderless table layout: every column stays on one row, with no border characters, no horizontal separators and no column bands. The application uses `printerTableBordered BordersNone` for the board, help and category tables. Cells are still padded to fixed widths with `textWidth` and `truncateVisible`, but the custom row renderer was removed.
+- Ansiform 1.0.0 implements `promptWithInitial`, so the edit forms open their fields with the current values. See [Ansiform form initial values](ansiform-form-defaults.md).
 
 The feedback is positive overall: the library provided the groups, tables, rules, solid bars and forms needed without pulling in a larger TUI framework.
 

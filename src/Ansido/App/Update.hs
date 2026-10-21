@@ -9,7 +9,6 @@ module Ansido.App.Update
   ) where
 
 --------------------------------------------------------------------------------
-import           Data.Char (isSpace)
 import           Data.List (findIndex)
 import           Data.Maybe (listToMaybe)
 
@@ -194,12 +193,8 @@ submitEdit identifier rawTitle rawContent app =
   case findTask identifier (appWorkspace app) of
     Nothing -> Left (UnknownTask identifier)
     Just task -> do
-      title <- if all isSpace rawTitle
-        then Right (taskTitle task)
-        else mkTaskTitle rawTitle
-      content <- if all isSpace rawContent
-        then Right (taskContent task)
-        else mkTaskContent rawContent
+      title <- mkTaskTitle rawTitle
+      content <- mkTaskContent rawContent
       workspace <- editTask identifier title content (appWorkspace app)
       let categoryIdentifier = taskCategory task
           tasks = filterTasks (uiFilter (appUi app))
@@ -268,10 +263,8 @@ submitCategoryEdit :: CategoryId -> String -> AppState
 submitCategoryEdit identifier rawName app =
   case findCategory identifier (appWorkspace app) of
     Nothing -> Left (UnknownCategory identifier)
-    Just category -> do
-      name <- if all isSpace rawName
-        then Right (categoryName category)
-        else mkCategoryName rawName
+    Just _ -> do
+      name <- mkCategoryName rawName
       workspace <- editCategory identifier name (appWorkspace app)
       let notice = Notice NoticeInfo
             ("Category updated: " <> categoryNameText name)

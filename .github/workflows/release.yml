@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up GHC and Cabal
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.14.1"
+          cabal-version: "latest"
+      - name: Update package index
+        run: cabal update
+      - name: Build executable
+        run: cabal build exe:ansido
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(cabal list-bin exe:ansido)"
+          architecture="$(uname -m)"
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp "$binary" dist/
+          cp README.md LICENSE CHANGELOG.md dist/
+          case "$RUNNER_OS" in
+            Windows)
+              mv "dist/$(basename "$binary")" dist/ansido.exe
+              asset="ansido-${version}-windows-${architecture}.zip"
+              (cd dist && 7z a "../${asset}" .)
+              ;;
+            macOS)
+              chmod +x "dist/$(basename "$binary")"
+              asset="ansido-${version}-macos-${architecture}.tar.gz"
+              tar -czf "$asset" -C dist .
+              ;;
+            Linux)
+              chmod +x "dist/$(basename "$binary")"
+              asset="ansido-${version}-linux-${architecture}.tar.gz"
+              tar -czf "$asset" -C dist .
+              ;;
+          esac
+          echo "Created ${asset}"
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ansido-${{ matrix.os }}
+          path: |
+            *.zip
+            *.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

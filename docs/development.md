@@ -4,7 +4,7 @@
 
 - GHC 9.14.1, the version used for the current release.
 - `cabal-install` 3.18 or newer.
-- Ansiform 0.7.10.3 from Hackage.
+- Ansiform 1.0.0 from Hackage.
 
 ## Commands
 
@@ -34,7 +34,7 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Category keys for creating, editing and deleting categories.
 - Category navigation with arrows, `j`/`k`, `w`/`s` and the `Enter` board shortcut.
 - Initial state on the category screen, vertical navigation, status cycling, filtering, editing, details, submit and select actions.
-- Category editing, category deletion with its tasks and blank input keeping the current name.
+- Category editing, category deletion with its tasks, and the pre-filled edit prompts.
 - Data file path propagation through `withDataFile`.
 
 The current suite has 43 tests.
@@ -52,6 +52,12 @@ The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-late
 - `saveWorkspace` relies on `renameFile`, which already replaces an existing board on Windows.
 - `app/Main.hs` sets the standard handles to UTF-8, so the arrows, the backspace icon and non-ASCII task text render on the Windows console.
 - Arrow keys depend on the terminal sending ANSI escape sequences. Windows Terminal and modern consoles do; on a console that does not, use `j`/`k` or `w`/`s` for vertical navigation. Letter keys, Enter, Backspace, Space and Delete are decoded from plain characters and work everywhere.
+
+## Releases
+
+Pushing a tag that starts with `v` triggers `.github/workflows/release.yml`. The workflow builds the executable on Linux, macOS and Windows, packages the binary with the README, LICENSE and CHANGELOG, and attaches the archives to a GitHub release with generated notes.
+
+Asset names follow `ansido-<version>-<os>-<arch>`. Linux and macOS use `.tar.gz`; Windows uses `.zip`. The Linux binary is built on Ubuntu 22.04 for a broader glibc range, and the macOS binary is built on `macos-15` for arm64.
 
 ## Versioning
 

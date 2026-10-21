@@ -120,7 +120,7 @@ The task form has two prompts, title and note. The category form has one prompt.
 
 ## Key decoding
 
-Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. The Delete key is decoded from the `Esc [ 3 ~` sequence. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action. Space is a normal character and is handled by the board and details screens.
+Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. The Delete key is decoded from the `Esc [ 3 ~` sequence. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action. Space is a normal character and is handled by the board and details screens. On terminals that do not send ANSI escape sequences, such as some Windows consoles, use `j`/`k` or `w`/`s` for vertical navigation.
 
 ## Theme
 

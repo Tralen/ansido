@@ -10,7 +10,7 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.8.1 is functional. It includes:
+Version 0.8.2 is functional. It includes:
 
 - Task category creation, selection, editing and deletion.
 - Arrow, `j`/`k` and `w`/`s` navigation on the category screen, with `Enter` opening the board.
@@ -24,6 +24,7 @@ Version 0.8.1 is functional. It includes:
 - A help page with the data file path.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
+- Linux, macOS and Windows builds, checked by GitHub Actions.
 - `R` to redraw and `X` to exit.
 
 The application always starts on the category screen.

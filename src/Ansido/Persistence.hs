@@ -14,12 +14,15 @@ module Ansido.Persistence
   ) where
 
 --------------------------------------------------------------------------------
-import           Control.Exception (IOException, try)
+import           Control.Exception (IOException, evaluate, try)
 import           Data.Maybe (catMaybes)
 import           System.Directory (createDirectoryIfMissing, doesFileExist,
-                                   renameFile)
+                                   getHomeDirectory, renameFile)
 import           System.Environment (lookupEnv)
 import           System.FilePath (takeDirectory, (</>))
+import           System.IO (IOMode (ReadMode, WriteMode), hGetContents, hPutStr,
+                            hSetEncoding, hSetNewlineMode, noNewlineTranslation,
+                            utf8, withFile)
 
 import           Ansido.Domain
 
@@ -99,9 +102,12 @@ joinTabs values =
     (v : vs) -> foldl (\acc next -> acc <> "\t" <> next) v vs
 
 -- | Parses the plain text format into a workspace.
+--
+-- Carriage returns are removed first, so files written or copied on Windows
+-- still parse on every platform.
 decodeWorkspace :: String -> Either PersistenceError Workspace
 decodeWorkspace raw =
-  case lines raw of
+  case lines (filter (/= '\r') raw) of
     [] -> Right emptyWorkspace
     (header : body) ->
       case headerVersion header of
@@ -197,19 +203,23 @@ readInt text =
 -- File access.
 --------------------------------------------------------------------------------
 
--- | Resolves the data file, honouring @ANSIDO_FILE@ and falling back to
--- @$HOME/.ansido/board.tsv@.
+-- | Resolves the data file, honouring @ANSIDO_FILE@ and falling back to the
+-- user home directory with @.ansido/board.tsv@.
+--
+-- 'getHomeDirectory' reads @HOME@ on Unix and the platform profile directory on
+-- Windows, so the same code works on every system.
 defaultDataFile :: IO (Either PersistenceError FilePath)
 defaultDataFile = do
   override <- lookupEnv "ANSIDO_FILE"
   case override of
     Just path | not (null path) -> pure (Right path)
     _ -> do
-      home <- lookupEnv "HOME"
-      pure $ case home of
-        Just directory | not (null directory) ->
+      homeResult <- tryIO getHomeDirectory
+      pure $ case homeResult of
+        Right directory | not (null directory) ->
           Right (directory </> ".ansido" </> "board.tsv")
-        _ -> Left (FilePathUnavailable "Set HOME or ANSIDO_FILE to choose a data file.")
+        _ -> Left (FilePathUnavailable
+              "Set ANSIDO_FILE or a home directory to choose a data file.")
 
 -- | Loads the data file, treating a missing file as an empty workspace.
 loadWorkspace :: FilePath -> IO (Either PersistenceError Workspace)
@@ -219,12 +229,16 @@ loadWorkspace path = do
     Left exception -> pure (Left (ReadFailed path (show exception)))
     Right False    -> pure (Right emptyWorkspace)
     Right True     -> do
-      result <- tryIO (readFile path)
+      result <- tryIO (readTextFile path)
       pure $ case result of
         Left exception    -> Left (ReadFailed path (show exception))
         Right fileContent -> decodeWorkspace fileContent
 
 -- | Saves the data file atomically through a temporary sibling file.
+--
+-- 'renameFile' replaces an existing destination on every supported platform.
+-- It is atomic on POSIX and uses @MoveFileEx@ with @MOVEFILE_REPLACE_EXISTING@
+-- on Windows.
 saveWorkspace :: FilePath -> Workspace -> IO (Either PersistenceError ())
 saveWorkspace path workspace = do
   let directory = takeDirectory path
@@ -233,7 +247,7 @@ saveWorkspace path workspace = do
     Left exception -> pure (Left (WriteFailed path (show exception)))
     Right () -> do
       let temporary = path <> ".tmp"
-      writeResult <- tryIO (writeFile temporary (encodeWorkspace workspace))
+      writeResult <- tryIO (writeTextFile temporary (encodeWorkspace workspace))
       case writeResult of
         Left exception -> pure (Left (WriteFailed path (show exception)))
         Right () -> do
@@ -241,6 +255,27 @@ saveWorkspace path workspace = do
           pure $ case renameResult of
             Left exception -> Left (WriteFailed path (show exception))
             Right ()     -> Right ()
+
+-- | Reads a UTF-8 file without newline translation.
+--
+-- The whole content is forced before the handle closes, so the result does not
+-- depend on lazy IO and the format stays identical on every platform.
+readTextFile :: FilePath -> IO String
+readTextFile path =
+  withFile path ReadMode $ \handle -> do
+    hSetEncoding handle utf8
+    hSetNewlineMode handle noNewlineTranslation
+    contents <- hGetContents handle
+    _ <- evaluate (length contents)
+    pure contents
+
+-- | Writes a UTF-8 file without newline translation.
+writeTextFile :: FilePath -> String -> IO ()
+writeTextFile path contents =
+  withFile path WriteMode $ \handle -> do
+    hSetEncoding handle utf8
+    hSetNewlineMode handle noNewlineTranslation
+    hPutStr handle contents
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try

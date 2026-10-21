@@ -28,7 +28,7 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Text validation and trimming, including task notes.
 - Task and category transitions.
 - Workspace invariants.
-- Encode and decode round trips, version 1 compatibility and malformed inputs.
+- Encode and decode round trips, version 1 compatibility, CRLF files and malformed inputs.
 - Window slicing and borderless table construction with truncation.
 - Arrow, Enter/Backspace/Space, Delete, W/S, edit/filter and back navigation key mapping.
 - Category keys for creating, editing and deleting categories.
@@ -37,9 +37,19 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Category editing, category deletion with its tasks and blank input keeping the current name.
 - Data file path propagation through `withDataFile`.
 
-The current suite has 42 tests.
+The current suite has 43 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
+
+## Cross-platform
+
+The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all` and `cabal test all` on all three systems through `.github/workflows/ci.yml`.
+
+- The data file uses `ANSIDO_FILE` or `getHomeDirectory`, never a hardcoded path. On Windows `getHomeDirectory` uses the profile directory, so `HOME` is optional.
+- Board files are UTF-8 with Unix line endings on every platform. Reading also accepts CRLF files.
+- `saveWorkspace` relies on `renameFile`, which already replaces an existing board on Windows.
+- `app/Main.hs` sets the standard handles to UTF-8, so the arrows, the backspace icon and non-ASCII task text render on the Windows console.
+- Arrow keys depend on the terminal sending ANSI escape sequences. Windows Terminal and modern consoles do; on a console that does not, use `j`/`k` or `w`/`s` for vertical navigation. Letter keys, Enter, Backspace, Space and Delete are decoded from plain characters and work everywhere.
 
 ## Versioning
 

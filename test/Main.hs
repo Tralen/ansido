@@ -93,6 +93,7 @@ tests =
   , testDecodeBadHeader
   , testDecodeBadStatus
   , testDecodeVersion1
+  , testDecodeCrlf
   , testWindowStart
   , testWindowMiddle
   , testWindowEnd
@@ -358,6 +359,19 @@ testDecodeVersion1 =
           Just task ->
             checkEqual "legacy content" ""
               (taskContentText (taskContent task))
+  )
+
+testDecodeCrlf :: (String, Check)
+testDecodeCrlf =
+  ( "decode CRLF files"
+  , do
+      workspace <- fixtureWorkspace
+      let crlf = concatMap
+            (\char -> if char == '\n' then "\r\n" else [char])
+            (encodeWorkspace workspace)
+      checkEqual "crlf roundtrip" (Right workspace) (decodeWorkspace crlf)
+      checkEqual "no carriage return on encode" False
+        (elem '\r' (encodeWorkspace workspace))
   )
 
 testWindowStart :: (String, Check)

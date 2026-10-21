@@ -81,6 +81,15 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.8.2
+- Made the data file portable: `ANSIDO_FILE` first, then `getHomeDirectory`, which works on Windows without `HOME`.
+- Board files are now read and written as UTF-8 without newline translation; decoding also accepts CRLF files.
+- `saveWorkspace` uses `renameFile`, which replaces an existing board on Windows through `MoveFileEx`.
+- The executable sets the standard handles to UTF-8 so the interface renders on the Windows console.
+- Added `.github/workflows/ci.yml`, building and testing on Linux, macOS and Windows.
+- Documented the cross-platform behavior and the `j`/`k` and `w`/`s` fallback for terminals without ANSI arrow keys.
+- Added a CRLF decode test.
+
 ### 0.8.1
 - Moved the category notice directly below the category table, with a blank line before the footer, matching the board layout.
 - Changed the README documentation and license links to absolute GitHub URLs so they also work on Hackage.

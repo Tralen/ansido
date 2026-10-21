@@ -65,6 +65,11 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.6.4
+- Replaced the custom borderless row renderer with `printerTableBordered BordersNone` from Ansiform 0.7.10.3.
+- The board, help and category tables keep their fixed widths, truncation and styles without column bands.
+- Raised the Ansiform lower bound to 0.7.10.3.
+
 ### 0.6.3
 - Added `docs/ansiform-form-defaults.md`, a design proposal for editable pre-filled form fields in Ansiform, including the current limitation, proposed `Prompt` API, line editor, compatibility and test plan.
 

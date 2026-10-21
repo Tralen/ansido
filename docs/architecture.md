@@ -58,13 +58,13 @@ The pure layers never throw. Domain failures use `DomainError`, persistence fail
 
 ## Reusable components
 
-The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are rendered by a shared borderless row builder using Ansiform items and blocks, with fixed column widths and truncation. `noticePrinter` returns a single notice line, so the board can embed the notice in the same section as the table and keep the spacing exact.
+The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are rendered with `printerTableBordered BordersNone` from Ansiform. The cells are padded to fixed widths before the table printer sees them, so alignment and truncation stay the same without a custom row renderer. `noticePrinter` returns a single notice line, so the board can embed the notice in the same section as the table and keep the spacing exact.
 
 ## Ansiform notes
 
-The project now uses Ansiform 0.7.9.0. It fits the application well: the split between pure builders and the drawing layer keeps pages testable, `Maybe Table` makes malformed tables explicit as data, and the `Theme` record and solid bars make the chrome consistent across screens.
+The project now uses Ansiform 0.7.10.3. It fits the application well: the split between pure builders and the drawing layer keeps pages testable, `Maybe Table` makes malformed tables explicit as data, and the `Theme` record and solid bars make the chrome consistent across screens.
 
-The friction points found while building against 0.7.8.5 are resolved or clarified in 0.7.9.0:
+The friction points found while building against 0.7.8.5 are resolved or clarified in 0.7.9.0 and later:
 
 - The old synopsis for `printerSolidLineCenter` was ambiguous. The current documentation distinguishes `printerSolidLeft`, `printerSolidRight` and `printerSolidCenter`, which receive a `Block`, from `printerSolidLineLeft`, `printerSolidLineRight` and `printerSolidLineCenter`, which receive `[Block]`. The earlier note about a signature mismatch was a documentation issue, not an implementation change.
 - `printerGroupsBordered` and its variants now pad unequal groups automatically, so a bordered group layout no longer needs manual `blockEmpty` padding.
@@ -72,7 +72,7 @@ The friction points found while building against 0.7.8.5 are resolved or clarifi
 - The `readLineAt` documentation now warns that it already wraps `withLineInput`.
 - `addNumber`, `subtractNumber` and `subtractNumberMaybe` make non-negative arithmetic explicit. The application does not subtract `Number` values, but checked subtraction is available when needed.
 - Tables still truncate cells instead of wrapping them. The details screen uses `printerParagraph` to show the full note with word wrap, which is the right primitive for long text.
-- The borderless table printer falls back to column bands for tall tables, which split the help columns in the terminal. The application therefore renders tables row by row with `item`, `block`, `textWidth` and `truncateVisible`, keeping the borderless layout predictable while still using Ansiform's text primitives.
+- Ansiform 0.7.10.3 gives `BordersNone` a true borderless table layout: every column stays on one row, with no border characters, no horizontal separators and no column bands. The application uses `printerTableBordered BordersNone` for the board, help and category tables. Cells are still padded to fixed widths with `textWidth` and `truncateVisible`, but the custom row renderer was removed.
 
 The proposed API for editable form fields with initial values is documented in [Ansiform form defaults](ansiform-form-defaults.md).
 

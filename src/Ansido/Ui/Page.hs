@@ -24,10 +24,7 @@ import           Ansido.Ui.Theme
 import           Ansido.Version (versionText)
 
 -- | A styled cell in a borderless table.
-data Cell = Cell
-  { cellText  :: String
-  , cellStyle :: Style
-  }
+data Cell = Cell String Style
 
 -- | Renders the current state as a page.
 renderPage :: UiTheme -> AppState -> Page
@@ -164,10 +161,10 @@ boardTableSection theme app =
   section
     ( [ filterPrinter theme app
       , printerEmpty 1
-      , rowPrinter boardWidths boardAligns (boardHeader theme)
-      , printerEmpty 1
-      ] <> map (rowPrinter boardWidths boardAligns) (boardRows theme app)
-        <> noticePrinters theme app
+      , rowTablePrinter boardWidths boardAligns (boardHeader theme)
+          (blankRow boardWidths (themeTableBody (uiBase theme))
+            : boardRows theme app)
+      ] <> noticePrinters theme app
         <> [ printerEmpty 1 ]
     )
 
@@ -311,15 +308,14 @@ helpBody :: UiTheme -> AppState -> [Section]
 helpBody theme app =
   [ titleSection theme "Help"
   , sectionTop 1
-      ( [ rowPrinter helpWidths helpAligns (helpHeader theme)
+      ( [ rowTablePrinter helpWidths helpAligns (helpHeader theme)
+            (blankRow helpWidths (themeTableBody base) : helpRows theme)
         , printerEmpty 1
-        ] <> map (rowPrinter helpWidths helpAligns) (helpRows theme)
-          <> [ printerEmpty 1
-             , printerLeft 1
-                 (blockSimple "Data file:" (themeTableHeader base))
-             , printerParagraph 3 0
-                 [ blockSimple (dataFilePath app) (themeTableBody base) ]
-             ] )
+        , printerLeft 1
+            (blockSimple "Data file:" (themeTableHeader base))
+        , printerParagraph 3 0
+            [ blockSimple (dataFilePath app) (themeTableBody base) ]
+        ] )
   ]
   where
     base = uiBase theme
@@ -389,14 +385,14 @@ categoryRows theme app =
 categoriesBody :: UiTheme -> AppState -> [Section]
 categoriesBody theme app =
   [ sectionBody 1
-      ( [ rowPrinter categoryWidths categoryAligns (categoryHeader theme)
-        , printerEmpty 1
-        ] <> map (rowPrinter categoryWidths categoryAligns)
-                 (categoryRows theme app)
-          <> [ printerLeft 1
-                 (blockSimple "Press n to create a category."
-                    (themeMuted (uiBase theme)))
-             ] )
+      ( [ rowTablePrinter categoryWidths categoryAligns
+            (categoryHeader theme)
+            (blankRow categoryWidths (themeTableBody (uiBase theme))
+              : categoryRows theme app)
+        , printerLeft 1
+            (blockSimple "Press n to create a category."
+               (themeMuted (uiBase theme)))
+        ] )
   ]
 
 -- Footer.
@@ -477,22 +473,22 @@ promptLine theme label =
 -- Table rendering.
 --------------------------------------------------------------------------------
 
-rowPrinter :: [Int] -> [Align] -> [Cell] -> Printer
-rowPrinter widths aligns cells =
-  printerLeft 1 (renderRow widths aligns cells)
+-- | Builds a table printer that keeps the fixed widths and styles of the cells.
+rowTablePrinter :: [Int] -> [Align] -> [Cell] -> [[Cell]] -> Printer
+rowTablePrinter widths aligns header rows =
+  printerTableBordered BordersNone defaultTableFormat 1 0
+    (tableBlocks
+      (zipWith3 cellBlock widths aligns header)
+      [ zipWith3 cellBlock widths aligns row | row <- rows ])
 
-renderRow :: [Int] -> [Align] -> [Cell] -> Block
-renderRow widths aligns cells =
-  block (go widths aligns cells)
-  where
-    go [] _ [] = []
-    go (columnWidth : restWidths) (align : restAligns) (cell : restCells) =
-      item (padCell columnWidth align (cellText cell)) (cellStyle cell)
-        : (if null restCells
-             then []
-             else item "  " styleDefault
-                    : go restWidths restAligns restCells)
-    go _ _ _ = []
+-- | Pads one cell to its column width and keeps its style.
+cellBlock :: Int -> Align -> Cell -> Block
+cellBlock columnWidth align (Cell text style) =
+  blockSimple (padCell columnWidth align text) style
+
+-- | A blank row used to separate the header from the body.
+blankRow :: [Int] -> Style -> [Cell]
+blankRow widths style = replicate (length widths) (Cell "" style)
 
 padCell :: Int -> Align -> String -> String
 padCell columnWidth align text =

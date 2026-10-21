@@ -4,7 +4,7 @@
 
 - GHC 9.14.1, the version used for the current release.
 - `cabal-install` 3.18 or newer.
-- Ansiform 0.7.9.0 from Hackage.
+- Ansiform 0.7.10.3 from Hackage.
 
 ## Commands
 
@@ -29,7 +29,7 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Task and category transitions.
 - Workspace invariants.
 - Encode and decode round trips, version 1 compatibility and malformed inputs.
-- Window slicing and borderless table row rendering with truncation.
+- Window slicing and borderless table construction with truncation.
 - Arrow, Enter/Backspace/Space, Delete, W/S, edit/filter and back navigation key mapping.
 - Initial state on the category screen, vertical navigation, status cycling, filtering, editing, details, submit and select actions.
 - Data file path propagation through `withDataFile`.

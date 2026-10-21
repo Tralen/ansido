@@ -87,11 +87,11 @@ The page is composed of:
 9. A solid footer bar.
 10. One or two optional prompt lines.
 
-The board and category tables have no borders. The help table is also borderless. The column alignment and truncation from the shared row renderer remain.
+The board, category and help tables use the borderless mode of the Ansiform table printer. The column alignment and truncation remain.
 
 The board table has three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green. The filter line sits immediately below the rule, with a blank line below it before the table header.
 
-The shared row renderer uses per-column maximum widths of 20 columns for the title, 40 for the note and 7 for the state, with an ellipsis when a title or note is truncated. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
+The board table uses fixed column widths of 20 columns for the title, 40 for the note and 7 for the state, with truncation when a title or note is longer. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
 
 The details screen shows the title, state and category as compact fields, followed by the complete note in a paragraph. Paragraphs wrap to the terminal width, so long notes remain readable.
 

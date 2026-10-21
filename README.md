@@ -12,6 +12,11 @@ Haskell with Cabal, using [Ansiform](https://hackage.haskell.org/package/ansifor
 
 PVP, single-sourced from the `ansido.cabal` file.
 
+- Patch: fixes and minor refinements.
+- Minor: new user-facing features or screens.
+- Major 2: data model breaking changes.
+- Major 1: major release milestones.
+
 ## Goal
 
 `ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, groups, styles, immediate input, forms, line input and redraw.

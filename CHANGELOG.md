@@ -65,6 +65,10 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.6.2
+- Removed the bracketed current value from the edit prompts; the current content remains above and empty input keeps the current value.
+- Styled the `Categories:` label in the category bar with the bold yellow table-header style.
+
 ### 0.6.1
 - Fixed the details view edit key: it is `e`, matching the board, not `f`.
 - Moved the `Filter:` line one line up, directly below the rule, with a blank line below it.

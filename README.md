@@ -10,7 +10,7 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.6.1 is functional. It includes:
+Version 0.6.2 is functional. It includes:
 
 - Task category creation and selection.
 - A single task table with title, note and state columns, without borders.

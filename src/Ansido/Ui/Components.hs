@@ -69,7 +69,7 @@ categorySection theme active categories =
           (blockSimple "No categories yet." (themeMuted base)) ]
     _  -> section
       [ printerLineLeft 1
-          (blockSimple "Categories:" (themeMuted base) : map categoryBlock categories) ]
+          (blockSimple "Categories:" (themeTableHeader base) : map categoryBlock categories) ]
   where
     base = uiBase theme
     categoryBlock category =

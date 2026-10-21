@@ -44,9 +44,9 @@ The state cycle is `Todo -> Doing -> Done -> Todo`. The selected row stays in pl
 
 ### Edit task
 
-The edit screen reuses the task form and shows the current title, state, category and note above the prompts. The prompt labels also include the current title and note, truncated to 20 columns, so the input context stays visible even at the bottom of the page. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
+The edit screen reuses the task form and shows the current title, state, category and note above the prompts. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
 
-Ansiform forms read complete lines, so the current value is shown in the prompt label rather than as an editable pre-filled buffer. Empty input means "keep current".
+Ansiform forms read complete lines, so the current value is shown above the prompts rather than as an editable pre-filled buffer. Empty input means "keep current".
 
 ### Categories
 
@@ -113,7 +113,7 @@ Immediate input returns one character at a time. Arrow keys arrive as ANSI escap
 
 `UiTheme` wraps the Ansiform `Theme` and adds semantic styles for Todo, Doing, Done, selection and notices. Status colors are red for Todo, cyan for Doing and green for Done. The header and footer use a blue bar with white text.
 
-Muted text is white italic, used for labels, inactive category tabs, empty placeholders and hidden-row markers. The muted gray color is reserved for horizontal rules. The selected row uses bold white, while normal table text uses vivid white. The `Data file` label uses the bold yellow table-header style; the path below it is normal text and wraps when long.
+Muted text is white italic, used for labels, inactive category tabs, empty placeholders and hidden-row markers. The muted gray color is reserved for horizontal rules. The selected row uses bold white, while normal table text uses vivid white. The `Categories:` label in the category bar uses the bold yellow table-header style, and the `Data file` label uses the same style; the path below it is normal text and wraps when long.
 
 ## Terminal behavior
 

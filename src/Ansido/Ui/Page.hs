@@ -42,30 +42,10 @@ renderTaskForm theme app =
   )
   where
     before = pageChrome theme app
-    currentTask =
-      case uiScreen (appUi app) of
-        EditTaskScreen identifier -> findTask identifier (appWorkspace app)
-        _                         -> Nothing
     editMode =
       case uiScreen (appUi app) of
         EditTaskScreen _ -> True
         _                -> False
-    titlePrompt =
-      case currentTask of
-        Just task ->
-          "Task title ["
-            <> truncateVisible 20 (taskTitleText (taskTitle task))
-            <> "]: "
-        Nothing -> taskTitlePrompt
-    contentPrompt =
-      case currentTask of
-        Just task ->
-          "Task note ["
-            <> truncateVisible 20 (taskNoteText task)
-            <> "]: "
-        Nothing -> taskContentPrompt
-    titleColumn = 2 + textWidth titlePrompt
-    contentColumn = 2 + textWidth contentPrompt
     hintSections =
       if editMode
         then [ section [ printerLeft 2
@@ -75,12 +55,14 @@ renderTaskForm theme app =
     titleIndex = length before + length hintSections
     contentIndex = titleIndex + 1
     sections =
-      [ promptLine theme titlePrompt
-      , promptLine theme contentPrompt
+      [ promptLine theme taskTitlePrompt
+      , promptLine theme taskContentPrompt
       ]
     prompts =
-      [ promptAt (formNumber titleIndex) 0 (formNumber titleColumn)
-      , promptAt (formNumber contentIndex) 0 (formNumber contentColumn)
+      [ promptAt (formNumber titleIndex) 0
+          (formNumber taskTitlePromptColumn)
+      , promptAt (formNumber contentIndex) 0
+          (formNumber taskContentPromptColumn)
       ]
 
 -- | Renders a category form and returns the prompt read by 'readForm'.

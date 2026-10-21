@@ -45,6 +45,8 @@ A failing test prints its name and message and exits with a failure code. A pass
 
 The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all` and `cabal test all` on all three systems through `.github/workflows/ci.yml`.
 
+The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-latest` image ships the macOS 26/27 SDK, whose `arm64e.x1-macos` entries in the `.tbd` stub files are rejected by the linker that GHC 9.14.1 uses. Revisit the pin when a newer GHC links against that SDK.
+
 - The data file uses `ANSIDO_FILE` or `getHomeDirectory`, never a hardcoded path. On Windows `getHomeDirectory` uses the profile directory, so `HOME` is optional.
 - Board files are UTF-8 with Unix line endings on every platform. Reading also accepts CRLF files.
 - `saveWorkspace` relies on `renameFile`, which already replaces an existing board on Windows.

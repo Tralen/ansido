@@ -105,7 +105,7 @@ detailsCommand :: Char -> Maybe Command
 detailsCommand key =
   case key of
     ' ' -> Just CycleCommand
-    'f' -> Just EditTaskCommand
+    'e' -> Just EditTaskCommand
     '?' -> Just HelpCommand
     _   -> Nothing
 

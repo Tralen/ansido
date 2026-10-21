@@ -515,6 +515,14 @@ testArrowKeys =
         (commandForKey BoardScreen KeyEscape)
       checkEqual "help up" Nothing
         (commandForKey HelpScreen KeyUp)
+      checkEqual "board e edits" (Just EditTaskCommand)
+        (commandForKey BoardScreen (KeyCharacter 'e'))
+      checkEqual "board f filters" (Just CycleFilterCommand)
+        (commandForKey BoardScreen (KeyCharacter 'f'))
+      checkEqual "details e edits" (Just EditTaskCommand)
+        (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'e'))
+      checkEqual "details f is free" Nothing
+        (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'f'))
   )
 
 testBackActions :: (String, Check)

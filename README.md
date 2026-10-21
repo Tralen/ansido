@@ -10,14 +10,14 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.6.0 is functional. It includes:
+Version 0.6.1 is functional. It includes:
 
 - Task category creation and selection.
 - A single task table with title, note and state columns, without borders.
 - Vertical navigation with arrow keys, `j` and `k`, or `w` and `s`.
 - A state filter that cycles through all, Todo, Doing and Done.
 - `Enter` to add a task and `Space` to cycle the selected task state.
-- `e` to edit the selected task from the board and `f` to edit from the details view.
+- `e` to edit the selected task from the board or the details view.
 - `v` to view the full note with word wrap.
 - `Backspace` to go back and `Del` to delete.
 - A help page with the data file path.

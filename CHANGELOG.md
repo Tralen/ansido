@@ -65,4 +65,9 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
-_None yet._
+### 0.6.1
+- Fixed the details view edit key: it is `e`, matching the board, not `f`.
+- Moved the `Filter:` line one line up, directly below the rule, with a blank line below it.
+- Styled the active filter name with the state color: Todo red, Doing cyan, Done green, and all bold white.
+- Populated the edit prompt labels with the current title and note, truncated to 20 columns.
+- Added key mapping checks for the board and details edit keys.

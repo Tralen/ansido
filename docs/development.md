@@ -30,7 +30,7 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Workspace invariants.
 - Encode and decode round trips, version 1 compatibility and malformed inputs.
 - Window slicing and borderless table row rendering with truncation.
-- Arrow, Enter/Backspace/Space, Delete, W/S and back navigation key mapping.
+- Arrow, Enter/Backspace/Space, Delete, W/S, edit/filter and back navigation key mapping.
 - Initial state on the category screen, vertical navigation, status cycling, filtering, editing, details, submit and select actions.
 - Data file path propagation through `withDataFile`.
 

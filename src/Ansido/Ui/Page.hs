@@ -42,10 +42,30 @@ renderTaskForm theme app =
   )
   where
     before = pageChrome theme app
+    currentTask =
+      case uiScreen (appUi app) of
+        EditTaskScreen identifier -> findTask identifier (appWorkspace app)
+        _                         -> Nothing
     editMode =
       case uiScreen (appUi app) of
         EditTaskScreen _ -> True
         _                -> False
+    titlePrompt =
+      case currentTask of
+        Just task ->
+          "Task title ["
+            <> truncateVisible 20 (taskTitleText (taskTitle task))
+            <> "]: "
+        Nothing -> taskTitlePrompt
+    contentPrompt =
+      case currentTask of
+        Just task ->
+          "Task note ["
+            <> truncateVisible 20 (taskNoteText task)
+            <> "]: "
+        Nothing -> taskContentPrompt
+    titleColumn = 2 + textWidth titlePrompt
+    contentColumn = 2 + textWidth contentPrompt
     hintSections =
       if editMode
         then [ section [ printerLeft 2
@@ -55,14 +75,12 @@ renderTaskForm theme app =
     titleIndex = length before + length hintSections
     contentIndex = titleIndex + 1
     sections =
-      [ promptLine theme taskTitlePrompt
-      , promptLine theme taskContentPrompt
+      [ promptLine theme titlePrompt
+      , promptLine theme contentPrompt
       ]
     prompts =
-      [ promptAt (formNumber titleIndex) 0
-          (formNumber taskTitlePromptColumn)
-      , promptAt (formNumber contentIndex) 0
-          (formNumber taskContentPromptColumn)
+      [ promptAt (formNumber titleIndex) 0 (formNumber titleColumn)
+      , promptAt (formNumber contentIndex) 0 (formNumber contentColumn)
       ]
 
 -- | Renders a category form and returns the prompt read by 'readForm'.
@@ -161,20 +179,24 @@ boardHeader theme =
 
 boardTableSection :: UiTheme -> AppState -> Section
 boardTableSection theme app =
-  sectionBody 1
+  section
     ( [ filterPrinter theme app
+      , printerEmpty 1
       , rowPrinter boardWidths boardAligns (boardHeader theme)
       , printerEmpty 1
       ] <> map (rowPrinter boardWidths boardAligns) (boardRows theme app)
         <> noticePrinters theme app
+        <> [ printerEmpty 1 ]
     )
 
 boardEmptySection :: UiTheme -> AppState -> String -> Section
 boardEmptySection theme app message =
-  sectionBody 1
+  section
     ( [ filterPrinter theme app
+      , printerEmpty 1
       , printerLeft 1 (blockSimple message (themeMuted base))
       ] <> noticePrinters theme app
+        <> [ printerEmpty 1 ]
     )
   where
     base = uiBase theme
@@ -183,8 +205,12 @@ filterPrinter :: UiTheme -> AppState -> Printer
 filterPrinter theme app =
   printerLeft 1 (blockCycle
     [ ("Filter: ", themeMuted (uiBase theme))
-    , (filterLabel (uiFilter (appUi app)), themeTableHeader (uiBase theme))
+    , (filterLabel active, filterStyle active)
     ])
+  where
+    active = uiFilter (appUi app)
+    filterStyle ShowAll = uiSelected theme
+    filterStyle (OnlyStatus status) = statusStyle theme status
 
 boardRows :: UiTheme -> AppState -> [[Cell]]
 boardRows theme app =
@@ -328,9 +354,8 @@ helpEntries =
   , ("w / s", "wasd alternative")
   , ("Enter", "add a task")
   , ("Space", "cycle the selected task state")
-  , ("e", "edit the selected task (board)")
+  , ("e", "edit the selected task")
   , ("f (board)", "filter by state")
-  , ("f (details)", "edit the task")
   , ("Del", "delete the selected task")
   , ("v", "view the full note")
   , ("Backspace / Esc", "go back one screen")
@@ -411,7 +436,7 @@ footerHints theme screen =
     DetailsScreen _ ->
       [ keyHintText theme "⌫" "back"
       , keyHintText theme "Space" "state"
-      , keyHint theme 'f' "edit"
+      , keyHint theme 'e' "edit"
       , keyHintText theme "Del" "del"
       , keyHint theme 'x' "exit"
       ]

@@ -40,13 +40,13 @@ The state cycle is `Todo -> Doing -> Done -> Todo`. The selected row stays in pl
 
 ### Details
 
-`Backspace` or `Esc` returns to the board, `Space` cycles the task state, `f` edits the task, `Del` deletes it, `?` opens help and `x` exits. The complete note is shown with word wrap.
+`Backspace` or `Esc` returns to the board, `Space` cycles the task state, `e` edits the task, `Del` deletes it, `?` opens help and `x` exits. The complete note is shown with word wrap.
 
 ### Edit task
 
-The edit screen reuses the task form and shows the current title, state, category and note above the prompts. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
+The edit screen reuses the task form and shows the current title, state, category and note above the prompts. The prompt labels also include the current title and note, truncated to 20 columns, so the input context stays visible even at the bottom of the page. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
 
-Ansiform forms read lines rather than providing an editable pre-filled buffer. The current content is therefore shown above the prompts, and empty input means "keep current".
+Ansiform forms read complete lines, so the current value is shown in the prompt label rather than as an editable pre-filled buffer. Empty input means "keep current".
 
 ### Categories
 
@@ -68,7 +68,7 @@ Input is validated by the domain smart constructors, so an overlong title, an ov
 
 ## Filtering
 
-The `f` key cycles the board filter through `all`, `Todo`, `Doing` and `Done`, then back to `all`. A line above the table always shows the current filter, so changing the filter does not move the table.
+The `f` key cycles the board filter through `all`, `Todo`, `Doing` and `Done`, then back to `all`. The `Filter:` line is the first line below the rule, with a blank line after it, so changing the filter does not move the table. The active filter name uses the state color: Todo red, Doing cyan, Done green, and all bold white.
 
 The filter applies to the task table and to the selected row. If the filter hides the selected task, the selection is clamped to the visible tasks. When a new task is created, the filter returns to `all` so the new task is visible. The category task counts remain totals and do not change with the filter.
 
@@ -89,7 +89,7 @@ The page is composed of:
 
 The board and category tables have no borders. The help table is also borderless. The column alignment and truncation from the shared row renderer remain.
 
-The board table has three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green. The filter line sits above the table header.
+The board table has three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green. The filter line sits immediately below the rule, with a blank line below it before the table header.
 
 The shared row renderer uses per-column maximum widths of 20 columns for the title, 40 for the note and 7 for the state, with an ellipsis when a title or note is truncated. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
 

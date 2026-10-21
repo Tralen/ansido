@@ -50,7 +50,6 @@ screenBody theme app =
   noticeSections theme app
     <> case uiScreen (appUi app) of
          BoardScreen       -> boardBody theme app
-         DetailsScreen _   -> detailsBody theme app
          HelpScreen        -> helpBody theme
          CategoryScreen    -> categoriesBody theme app
          AddTaskScreen     -> boardBody theme app
@@ -69,122 +68,71 @@ boardBody :: UiTheme -> AppState -> [Section]
 boardBody theme app
   | null (workspaceCategories (appWorkspace app)) =
       [ emptySection theme "Create a category with c to get started." ]
-  | otherwise = [ boardSection theme app ]
+  | null (visibleTasks app) =
+      [ emptySection theme "No tasks yet, press a to add one." ]
+  | otherwise =
+      [ boardTableSection theme app ]
 
-boardSection :: UiTheme -> AppState -> Section
-boardSection theme app =
+boardTableSection :: UiTheme -> AppState -> Section
+boardTableSection theme app =
   sectionBody 1
-    [ printerGroupsBordered BordersLight 1 1 (boardColumns theme app) ]
+    [ printerTableBordered BordersLight boardTableFormat 1 1
+        (boardTable theme app) ]
 
-boardColumns :: UiTheme -> AppState -> [Group]
-boardColumns theme app =
-  [ groupSimple (statusBlock theme status (length tasks)) body
-  | ((status, tasks), body) <- zip columns paddedBodies
+-- | Title, note and state columns, with the note as the main field.
+boardTableFormat :: TableFormat
+boardTableFormat =
+  tableFormat
+    [ ColumnSpec AlignLeft (Just 20) (EllipsisChar '…')
+    , ColumnSpec AlignLeft (Just 40) (EllipsisChar '…')
+    , ColumnSpec AlignRight (Just 7) EllipsisNone
+    ]
+
+boardTable :: UiTheme -> AppState -> Maybe Table
+boardTable theme app =
+  tableBlocks
+    [ blockSimple "Title" headerStyle
+    , blockSimple "Note" headerStyle
+    , blockSimple "State" headerStyle
+    ]
+    (aboveRows <> taskRows <> belowRows)
+  where
+    base = uiBase theme
+    headerStyle = themeTableHeader base
+    ui = appUi app
+    tasks = visibleTasks app
+    selected = selectedTaskId app
+    win = windowAround boardWindowSize (rowIndexValue (uiRow ui)) tasks
+    taskRows = map (taskRow theme selected) (windowItems win)
+    aboveRows = if windowAbove win then [markerRow theme] else []
+    belowRows = if windowBelow win then [markerRow theme] else []
+
+taskRow :: UiTheme -> Maybe TaskId -> Task -> [Block]
+taskRow theme selected task =
+  [ blockSimple (marker <> taskTitleText (taskTitle task)) titleStyle
+  , blockSimple noteText noteStyle
+  , blockSimple (statusLabel (taskStatus task))
+      (statusStyle theme (taskStatus task))
   ]
   where
-    ui = appUi app
-    selected = selectedTaskId app
-    columns =
-      [ (status, tasksFor status) | status <- allStatuses ]
-    tasksFor status =
-      case uiCategory ui of
-        Nothing -> []
-        Just identifier ->
-          tasksByStatus status (categoryTasks identifier (appWorkspace app))
-    bodies =
-      [ statusColumnBody theme ui selected status tasks
-      | (status, tasks) <- columns
-      ]
-    highest = maximum (0 : map length bodies)
-    paddedBodies = map (padBody highest) bodies
-
-statusColumnBody :: UiTheme -> UiState -> Maybe TaskId -> Status -> [Task] -> [Block]
-statusColumnBody theme ui selected status tasks
-  | null tasks = [mutedBlock theme "  (empty)"]
-  | otherwise =
-      above <> map (taskLine theme selectedHere) (windowItems win) <> below
-  where
-    current = status == uiStatus ui
-    position = if current then rowIndexValue (uiRow ui) else 0
-    win = windowAround boardWindowSize position tasks
-    selectedHere = if current then selected else Nothing
-    above = if windowAbove win then [mutedBlock theme "  ..."] else []
-    below = if windowBelow win then [mutedBlock theme "  ..."] else []
-
-padBody :: Int -> [Block] -> [Block]
-padBody target body =
-  body <> replicate (max 0 (target - length body)) blockEmpty
-
-taskLine :: UiTheme -> Maybe TaskId -> Task -> Block
-taskLine theme selected task =
-  blockCycle
-    [ (marker, markerStyle)
-    , (truncateVisible taskTitleWidth (taskTitleText (taskTitle task)), titleStyle)
-    ]
-  where
+    base = uiBase theme
     isSelected = Just (taskId task) == selected
     marker = if isSelected then "> " else "  "
-    markerStyle = if isSelected then uiSelected theme else themeMuted base
     titleStyle = if isSelected then uiSelected theme else themeTableBody base
-    base = uiBase theme
+    noteText
+      | null (taskContentText (taskContent task)) = "(empty)"
+      | otherwise = taskContentText (taskContent task)
+    noteStyle
+      | isSelected = uiSelected theme
+      | null (taskContentText (taskContent task)) = themeMuted base
+      | otherwise = themeTableBody base
 
-taskTitleWidth :: Int
-taskTitleWidth = 20
-
--- Details.
---------------------------------------------------------------------------------
-
-detailsBody :: UiTheme -> AppState -> [Section]
-detailsBody theme app =
-  case selectedTask app of
-    Nothing ->
-      [ emptySection theme "No task selected. Press b to return to the board." ]
-    Just task ->
-      [ titleSection theme "Task details"
-      , sectionBody 1
-          [ printerLeft 1 (fieldBlock theme "Id"
-              (show (taskIdValue (taskId task)))
-              (themeTableBody base))
-          , printerLeft 1 (fieldBlock theme "Title"
-              (taskTitleText (taskTitle task))
-              (uiSelected theme))
-          , printerLeft 1 (fieldBlock theme "Status"
-              (statusLabel (taskStatus task))
-              (statusStyle theme (taskStatus task)))
-          , printerLeft 1 (fieldBlock theme "Category"
-              (categoryNameFor (appWorkspace app) (taskCategory task))
-              (themeAccent base))
-          , printerLeft 1 (blockSimple "Note:" (themeMuted base))
-          , printerParagraph 3 0
-              [ blockSimple (taskNoteText task) (taskNoteStyle theme task) ]
-          ]
-      ]
-  where
-    base = uiBase theme
-
-taskNoteText :: Task -> String
-taskNoteText task
-  | null (taskContentText (taskContent task)) = "(empty)"
-  | otherwise = taskContentText (taskContent task)
-
-taskNoteStyle :: UiTheme -> Task -> Style
-taskNoteStyle theme task
-  | null (taskContentText (taskContent task)) = themeMuted (uiBase theme)
-  | otherwise = themeTableBody (uiBase theme)
-
-fieldBlock :: UiTheme -> String -> String -> Style -> Block
-fieldBlock theme label value style =
-  blockCycle
-    [ (label, themeMuted (uiBase theme))
-    , (": ", themeMuted (uiBase theme))
-    , (value, style)
-    ]
-
-categoryNameFor :: Workspace -> CategoryId -> String
-categoryNameFor workspace identifier =
-  case findCategory identifier workspace of
-    Just category -> categoryNameText (categoryName category)
-    Nothing       -> "(unknown)"
+markerRow :: UiTheme -> [Block]
+markerRow theme =
+  [ blockSimple "..." (themeMuted (uiBase theme))
+  , blockEmpty
+  , blockEmpty
+  ]
 
 -- Help.
 --------------------------------------------------------------------------------
@@ -211,14 +159,12 @@ helpTable theme =
 
 helpEntries :: [(String, String)]
 helpEntries =
-  [ ("↑ / ↓", "move inside a column")
-  , ("← / →", "move between columns")
-  , ("h / j / k / l", "vim alternative")
-  , ("1 / 2 / 3", "focus a column")
+  [ ("↑ / ↓", "select a task")
+  , ("j / k", "vim alternative")
+  , ("Enter", "next state")
+  , ("Backspace", "previous state")
   , ("a", "add a task")
-  , ("m", "advance the selected task")
   , ("d", "delete the selected task")
-  , ("v", "open task details")
   , ("c", "open categories")
   , ("n", "create a category")
   , ("1 .. 9", "select a category")
@@ -265,7 +211,7 @@ categoryTable theme app =
     indexedCategories = zip [1 .. length categories] categories
     nameStyle category
       | Just (categoryId category) == active = uiSelected theme
-      | otherwise = themeTableBody base
+      | otherwise = themeMuted base
     countFor category =
       length (categoryTasks (categoryId category) workspace)
 
@@ -276,20 +222,13 @@ footerHints :: UiTheme -> Screen -> [Block]
 footerHints theme screen =
   case screen of
     BoardScreen ->
-      [ keyHintText theme "↑↓" "rows"
-      , keyHintText theme "←→" "cols"
+      [ keyHintText theme "↑↓" "select"
+      , keyHintText theme "Enter" "next state"
+      , keyHintText theme "⌫" "prev state"
       , keyHint theme 'a' "add"
-      , keyHint theme 'm' "move"
       , keyHint theme 'd' "del"
-      , keyHint theme 'v' "view"
       , keyHint theme 'b' "back"
       , keyHint theme '?' "help"
-      , keyHint theme 'x' "exit"
-      ]
-    DetailsScreen _ ->
-      [ keyHint theme 'b' "back"
-      , keyHint theme 'm' "move"
-      , keyHint theme 'd' "del"
       , keyHint theme 'x' "exit"
       ]
     HelpScreen ->
@@ -345,13 +284,9 @@ promptLine theme label =
 -- Utilities.
 --------------------------------------------------------------------------------
 
-mutedBlock :: UiTheme -> String -> Block
-mutedBlock theme text =
-  blockSimple text (themeMuted (uiBase theme))
-
--- | Number of rows shown per board column.
+-- | Number of rows shown in the task table.
 boardWindowSize :: Int
-boardWindowSize = 8
+boardWindowSize = 10
 
 -- | A slice of a list with flags telling whether entries were hidden.
 data Window a = Window

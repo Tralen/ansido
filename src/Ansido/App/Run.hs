@@ -90,17 +90,13 @@ execute path state command =
         (backAction (uiScreen (appUi (loopApp state))))
     HelpCommand -> applyAction path state OpenHelp
     CategoriesCommand -> applyAction path state OpenCategories
-    DetailsCommand -> applyAction path state OpenDetails
     AddTaskCommand -> startTaskInput path state
     AddCategoryCommand -> startCategoryInput path state
-    AdvanceCommand -> applyAction path state AdvanceSelected
+    CycleCommand direction ->
+      applyAction path state (CycleSelected direction)
     DeleteCommand -> applyAction path state DeleteSelected
-    MoveColumnCommand direction ->
-      applyAction path state (MoveColumn direction)
     MoveRowCommand direction ->
       applyAction path state (MoveRow direction)
-    FocusStatusCommand status ->
-      applyAction path state (FocusStatus status)
     SelectCategoryCommand position ->
       selectCategoryByPosition path state position
 
@@ -230,6 +226,10 @@ readKeyEvent = do
   key <- readKey
   case key of
     Nothing -> pure Nothing
+    Just '\r' -> pure (Just KeyEnter)
+    Just '\n' -> pure (Just KeyEnter)
+    Just '\DEL' -> pure (Just KeyBackspace)
+    Just '\b' -> pure (Just KeyBackspace)
     Just '\ESC' -> readEscape
     Just char -> pure (Just (KeyCharacter char))
 

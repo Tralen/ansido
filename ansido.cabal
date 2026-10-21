@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               ansido
-version:            0.2.0
+version:            0.3.0
 synopsis:           A terminal task manager built with Ansiform.
 description:
   A small task manager for the terminal. It keeps categories and tasks in a
@@ -8,8 +8,9 @@ description:
   the Ansiform formatting library.
 license:            MIT
 license-file:       LICENSE
-author:             ansido contributors
-maintainer:         ansido contributors
+author:             Tunai Raiol
+maintainer:         Tralen <dev@tralen.cc>
+copyright:          2026 Tunai Raiol
 category:           User Interfaces
 build-type:         Simple
 tested-with:        GHC == 9.14.1

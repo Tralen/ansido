@@ -31,12 +31,11 @@ module Ansido.Domain
   , categoryTasks
   , tasksByStatus
   , taskCount
-  , allStatuses
   , statusLabel
   , statusKey
   , statusFromKey
   , nextStatus
-  , shiftStatus
+  , previousStatus
   , indexMaybe
     -- * Transitions.
   , addCategory
@@ -85,7 +84,7 @@ data Category = Category
 
 -- | The three columns of the board.
 data Status = Todo | Doing | Done
-  deriving (Eq, Ord, Show, Enum, Bounded)
+  deriving (Eq, Ord, Show)
 
 -- | A task with a title, a note, a status and the category that owns it.
 data Task = Task
@@ -104,15 +103,11 @@ data Workspace = Workspace
 
 --------------------------------------------------------------------------------
 
--- | Every status in board order.
-allStatuses :: [Status]
-allStatuses = [minBound .. maxBound]
-
 -- | Human readable label of a status.
 statusLabel :: Status -> String
-statusLabel Todo  = "TODO"
-statusLabel Doing = "DOING"
-statusLabel Done  = "DONE"
+statusLabel Todo  = "Todo"
+statusLabel Doing = "Doing"
+statusLabel Done  = "Done"
 
 -- | Stable key used by the persistence format.
 statusKey :: Status -> String
@@ -129,27 +124,17 @@ statusFromKey key =
     "done"  -> Just Done
     _       -> Nothing
 
--- | The next status in the cycle used by the move command.
+-- | The next status in the cycle used by the forward state key.
 nextStatus :: Status -> Status
 nextStatus Todo  = Doing
 nextStatus Doing = Done
 nextStatus Done  = Todo
 
--- | Shifts a status by a number of columns, clamped to the board.
-shiftStatus :: Int -> Status -> Status
-shiftStatus delta status =
-  statusAt (clamp 0 (length allStatuses - 1) (statusPosition status + delta))
-
-statusPosition :: Status -> Int
-statusPosition Todo  = 0
-statusPosition Doing = 1
-statusPosition Done  = 2
-
-statusAt :: Int -> Status
-statusAt position =
-  case drop position allStatuses of
-    (status : _) -> status
-    []           -> Todo
+-- | The previous status in the cycle used by the backward state key.
+previousStatus :: Status -> Status
+previousStatus Todo  = Done
+previousStatus Doing = Todo
+previousStatus Done  = Doing
 
 --------------------------------------------------------------------------------
 
@@ -375,9 +360,6 @@ taskTitleLimit = 120
 
 taskContentLimit :: Int
 taskContentLimit = 500
-
-clamp :: Ord a => a -> a -> a -> a
-clamp low high value = max low (min high value)
 
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace

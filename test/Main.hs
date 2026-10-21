@@ -9,8 +9,7 @@ import           Ansido.App.State
 import           Ansido.App.Update (backAction, update)
 import           Ansido.Domain
 import           Ansido.Persistence
-import           Ansido.Ui.Components (Notice (..), NoticeKind (..),
-                                       truncateVisible)
+import           Ansido.Ui.Components (Notice (..), NoticeKind (..))
 import           Ansido.Ui.Page (Window (..), windowAround)
 
 -- Harness.
@@ -86,16 +85,13 @@ tests =
   , testWindowStart
   , testWindowMiddle
   , testWindowEnd
-  , testTruncateShort
-  , testTruncateLong
   , testInitialState
-  , testMoveColumn
+  , testCycleStatus
   , testMoveRow
   , testSubmitTask
   , testSubmitCategory
   , testSelectUnknownCategory
   , testAddTaskWithoutCategory
-  , testDetailsWithoutSelection
   , testArrowKeys
   , testBackActions
   ]
@@ -290,17 +286,6 @@ testWindowEnd =
       checkEqual "below" False (windowBelow win)
   )
 
-testTruncateShort :: (String, Check)
-testTruncateShort =
-  ( "truncate short text"
-  , checkEqual "unchanged" "short" (truncateVisible 10 "short")
-  )
-
-testTruncateLong :: (String, Check)
-testTruncateLong =
-  ( "truncate long text"
-  , checkEqual "ellipsis" "ab..." (truncateVisible 5 "abcdefgh")
-  )
 
 testInitialState :: (String, Check)
 testInitialState =
@@ -309,18 +294,25 @@ testInitialState =
       category <- fixtureCategory
       workspace <- fixtureWorkspace
       let app = initialAppState workspace
+      checkEqual "category screen" CategoryScreen (uiScreen (appUi app))
       checkEqual "category selected" (Just (categoryId category)) (uiCategory (appUi app))
-      checkEqual "status selected" Todo (uiStatus (appUi app))
       checkEqual "row selected" 0 (rowIndexValue (uiRow (appUi app)))
   )
 
-testMoveColumn :: (String, Check)
-testMoveColumn =
-  ( "move column"
+testCycleStatus :: (String, Check)
+testCycleStatus =
+  ( "cycle status"
   , do
+      category <- fixtureCategory
       workspace <- fixtureWorkspace
-      app <- rightOr (update (MoveColumn Next) (initialAppState workspace))
-      checkEqual "next column" Doing (uiStatus (appUi app))
+      board <- rightOr (update (SelectCategory (categoryId category))
+                                (initialAppState workspace))
+      forward <- rightOr (update (CycleSelected Next) board)
+      backward <- rightOr (update (CycleSelected Previous) board)
+      checkEqual "forward" (Just Doing)
+        (taskStatus <$> findTask (TaskId 1) (appWorkspace forward))
+      checkEqual "backward" (Just Done)
+        (taskStatus <$> findTask (TaskId 1) (appWorkspace backward))
   )
 
 testMoveRow :: (String, Check)
@@ -383,16 +375,6 @@ testAddTaskWithoutCategory =
         Nothing     -> Left "no notice"
   )
 
-testDetailsWithoutSelection :: (String, Check)
-testDetailsWithoutSelection =
-  ( "details without selection"
-  , do
-      app <- rightOr (update OpenDetails (initialAppState emptyWorkspace))
-      case uiNotice (appUi app) of
-        Just notice -> checkEqual "info notice" NoticeInfo (noticeKind notice)
-        Nothing     -> Left "no notice"
-  )
-
 testArrowKeys :: (String, Check)
 testArrowKeys =
   ( "arrow keys"
@@ -401,14 +383,18 @@ testArrowKeys =
         (commandForKey BoardScreen KeyUp)
       checkEqual "down" (Just (MoveRowCommand Next))
         (commandForKey BoardScreen KeyDown)
-      checkEqual "left" (Just (MoveColumnCommand Previous))
+      checkEqual "left" Nothing
         (commandForKey BoardScreen KeyLeft)
-      checkEqual "right" (Just (MoveColumnCommand Next))
+      checkEqual "right" Nothing
         (commandForKey BoardScreen KeyRight)
+      checkEqual "enter" (Just (CycleCommand Next))
+        (commandForKey BoardScreen KeyEnter)
+      checkEqual "backspace" (Just (CycleCommand Previous))
+        (commandForKey BoardScreen KeyBackspace)
       checkEqual "escape" (Just BackCommand)
         (commandForKey BoardScreen KeyEscape)
-      checkEqual "details up" Nothing
-        (commandForKey (DetailsScreen (TaskId 1)) KeyUp)
+      checkEqual "help up" Nothing
+        (commandForKey HelpScreen KeyUp)
   )
 
 testBackActions :: (String, Check)
@@ -416,8 +402,6 @@ testBackActions =
   ( "back actions"
   , do
       checkEqual "board back" OpenCategories (backAction BoardScreen)
-      checkEqual "details back" OpenBoard
-        (backAction (DetailsScreen (TaskId 1)))
       checkEqual "category back" OpenBoard (backAction CategoryScreen)
   )
 

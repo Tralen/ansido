@@ -10,18 +10,20 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.2.0 is functional. It includes:
+Version 0.3.0 is functional. It includes:
 
 - Task category creation and selection.
-- A board with Todo, Doing and Done columns.
-- Arrow key navigation, with Vim keys as an alternative.
+- A single task table with title, note and state columns.
+- Vertical navigation with arrow keys or `j` and `k`.
+- `Enter` and `Backspace` to cycle the selected task state forward and backward.
 - Task creation with a title and a note.
-- Task advancement and deletion.
-- A task details page with the note.
+- Task deletion.
 - A help page.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
 - `R` to redraw and `X` to exit.
+
+The application always starts on the category screen.
 
 ## Quick start
 
@@ -37,7 +39,7 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-Press `c` to open categories and `n` to create the first one. Press `a` on the board to add a task: type the title, press Enter, type the note and press Enter again. Use the arrow keys to move, `m` to advance a task, `d` to delete it, `b` to go back and `?` for the full key reference.
+Press `c` to open categories and `n` to create the first one. Select a category with its number. Press `a` on the task table to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Enter` and `Backspace` to change its state, `d` to delete it, `b` to go back and `?` for the full key reference.
 
 ## Documentation
 
@@ -53,7 +55,7 @@ Press `c` to open categories and `n` to create the first one. Press `a` on the b
 - Pure core for task transitions, sorting and filtering.
 - IO only at the edges: input, drawing and persistence.
 - Errors as data; no exceptions for invalid input.
-- Reusable components for the header, footer, board and task lines.
+- Reusable components for the header, footer, table and task rows.
 
 ## License
 

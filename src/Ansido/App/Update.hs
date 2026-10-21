@@ -22,14 +22,11 @@ update action app =
     OpenBoard -> Right (setScreen BoardScreen app)
     OpenHelp -> Right (setScreen HelpScreen app)
     OpenCategories -> Right (setScreen CategoryScreen app)
-    OpenDetails -> openDetails app
     OpenAddTask -> openAddTask app
     OpenAddCategory -> Right (setScreen AddCategoryScreen app)
     SelectCategory identifier -> selectCategory identifier app
-    FocusStatus status -> Right (clampAppState (setStatus status app))
-    MoveColumn direction -> Right (clampAppState (moveColumn direction app))
     MoveRow direction -> Right (moveRow direction app)
-    AdvanceSelected -> advanceSelected app
+    CycleSelected direction -> cycleSelected direction app
     DeleteSelected -> deleteSelected app
     SubmitTask rawTitle rawContent -> submitTask rawTitle rawContent app
     SubmitCategory rawName -> submitCategory rawName app
@@ -42,7 +39,6 @@ backAction screen =
   case screen of
     BoardScreen       -> OpenCategories
     CategoryScreen    -> OpenBoard
-    DetailsScreen _   -> OpenBoard
     HelpScreen        -> OpenBoard
     AddTaskScreen     -> OpenBoard
     AddCategoryScreen -> OpenCategories
@@ -59,14 +55,6 @@ clearNotice :: AppState -> AppState
 clearNotice app =
   app { appUi = (appUi app) { uiNotice = Nothing } }
 
-openDetails :: AppState -> Either DomainError AppState
-openDetails app =
-  case selectedTask app of
-    Just task ->
-      Right (setScreen (DetailsScreen (taskId task)) app)
-    Nothing ->
-      Right (withNotice (Notice NoticeInfo "No task selected.") app)
-
 openAddTask :: AppState -> Either DomainError AppState
 openAddTask app =
   case uiCategory (appUi app) of
@@ -81,7 +69,6 @@ selectCategory identifier app
         { appUi = (appUi app)
             { uiScreen = BoardScreen
             , uiCategory = Just identifier
-            , uiStatus = Todo
             , uiRow = RowIndex 0
             , uiNotice = Nothing
             }
@@ -90,18 +77,6 @@ selectCategory identifier app
 
 -- Selection.
 --------------------------------------------------------------------------------
-
-setStatus :: Status -> AppState -> AppState
-setStatus status app =
-  app { appUi = (appUi app) { uiStatus = status } }
-
-moveColumn :: Direction -> AppState -> AppState
-moveColumn direction app =
-  let delta = case direction of
-        Previous -> -1
-        Next     -> 1
-      status = shiftStatus delta (uiStatus (appUi app))
-  in setStatus status app
 
 moveRow :: Direction -> AppState -> AppState
 moveRow direction app =
@@ -115,15 +90,18 @@ moveRow direction app =
 -- Tasks.
 --------------------------------------------------------------------------------
 
-advanceSelected :: AppState -> Either DomainError AppState
-advanceSelected app =
+cycleSelected :: Direction -> AppState -> Either DomainError AppState
+cycleSelected direction app =
   case selectedTask app of
     Nothing ->
       Right (withNotice (Notice NoticeInfo "No task selected.") app)
     Just task -> do
-      workspace <- advanceTask (taskId task) (appWorkspace app)
-      let next = nextStatus (taskStatus task)
-          notice = Notice NoticeInfo ("Moved to " <> statusLabel next <> ".")
+      let next = case direction of
+            Next     -> nextStatus (taskStatus task)
+            Previous -> previousStatus (taskStatus task)
+      workspace <- moveTask (taskId task) next (appWorkspace app)
+      let notice = Notice NoticeInfo
+            ("State changed to " <> statusLabel next <> ".")
       Right (clampAppState (app
         { appWorkspace = workspace
         , appUi = (appUi app) { uiNotice = Just notice }
@@ -154,10 +132,9 @@ submitTask rawTitle rawContent app =
     Just identifier -> do
       title <- mkTaskTitle rawTitle
       content <- mkTaskContent rawContent
-      (task, workspace) <- addTask identifier title content (appWorkspace app)
-      let todoTasks = tasksByStatus (taskStatus task)
-                        (categoryTasks identifier workspace)
-          position = max 0 (length todoTasks - 1)
+      (_, workspace) <- addTask identifier title content (appWorkspace app)
+      let tasks = categoryTasks identifier workspace
+          position = max 0 (length tasks - 1)
           notice = Notice NoticeInfo
             ("Task added: " <> taskTitleText title)
       Right (clampAppState (app
@@ -165,7 +142,6 @@ submitTask rawTitle rawContent app =
         , appUi = (appUi app)
             { uiScreen = BoardScreen
             , uiCategory = Just identifier
-            , uiStatus = taskStatus task
             , uiRow = RowIndex position
             , uiNotice = Just notice
             }
@@ -185,7 +161,6 @@ submitCategory rawName app = do
     , appUi = (appUi app)
         { uiScreen = CategoryScreen
         , uiCategory = Just (categoryId category)
-        , uiStatus = Todo
         , uiRow = RowIndex 0
         , uiNotice = Just notice
         }
@@ -205,8 +180,7 @@ clampUiState workspace ui =
       tasks = case identifier of
         Nothing -> []
         Just categoryIdentifier ->
-          tasksByStatus (uiStatus ui)
-            (categoryTasks categoryIdentifier workspace)
+          categoryTasks categoryIdentifier workspace
       limit = max 0 (length tasks - 1)
       position = min (max 0 (rowIndexValue (uiRow ui))) limit
   in ui

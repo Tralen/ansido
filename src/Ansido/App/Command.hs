@@ -12,7 +12,6 @@ module Ansido.App.Command
 import           Data.Char (digitToInt, isDigit, toLower)
 
 import           Ansido.App.State (Direction (..), Screen (..))
-import           Ansido.Domain (Status (..))
 
 -- | A decoded terminal key, with arrows separated from escape sequences.
 data Key
@@ -21,6 +20,8 @@ data Key
   | KeyDown
   | KeyLeft
   | KeyRight
+  | KeyEnter
+  | KeyBackspace
   | KeyEscape
   deriving (Eq, Show)
 
@@ -31,14 +32,11 @@ data Command
   | HelpCommand
   | BackCommand
   | CategoriesCommand
-  | DetailsCommand
   | AddTaskCommand
   | AddCategoryCommand
-  | AdvanceCommand
+  | CycleCommand Direction
   | DeleteCommand
-  | MoveColumnCommand Direction
   | MoveRowCommand Direction
-  | FocusStatusCommand Status
   | SelectCategoryCommand Int
   deriving (Eq, Show)
 
@@ -49,8 +47,10 @@ commandForKey screen key =
     KeyEscape -> Just BackCommand
     KeyUp    -> boardOnly (MoveRowCommand Previous)
     KeyDown  -> boardOnly (MoveRowCommand Next)
-    KeyLeft  -> boardOnly (MoveColumnCommand Previous)
-    KeyRight -> boardOnly (MoveColumnCommand Next)
+    KeyLeft  -> Nothing
+    KeyRight -> Nothing
+    KeyEnter -> boardOnly (CycleCommand Next)
+    KeyBackspace -> boardOnly (CycleCommand Previous)
     KeyCharacter char -> characterCommand screen char
   where
     boardOnly command =
@@ -68,7 +68,6 @@ characterCommand screen key =
     _ ->
       case screen of
         BoardScreen      -> boardCommand (toLower key)
-        DetailsScreen _  -> detailsCommand (toLower key)
         HelpScreen       -> helpCommand (toLower key)
         CategoryScreen   -> categoryCommand key
         AddTaskScreen    -> Nothing
@@ -79,26 +78,10 @@ boardCommand key =
   case key of
     'a' -> Just AddTaskCommand
     'c' -> Just CategoriesCommand
-    'v' -> Just DetailsCommand
-    'm' -> Just AdvanceCommand
     'd' -> Just DeleteCommand
-    'h' -> Just (MoveColumnCommand Previous)
-    'l' -> Just (MoveColumnCommand Next)
     'k' -> Just (MoveRowCommand Previous)
     'j' -> Just (MoveRowCommand Next)
-    '1' -> Just (FocusStatusCommand Todo)
-    '2' -> Just (FocusStatusCommand Doing)
-    '3' -> Just (FocusStatusCommand Done)
     'b' -> Just BackCommand
-    '?' -> Just HelpCommand
-    _   -> Nothing
-
-detailsCommand :: Char -> Maybe Command
-detailsCommand key =
-  case key of
-    'b' -> Just BackCommand
-    'm' -> Just AdvanceCommand
-    'd' -> Just DeleteCommand
     '?' -> Just HelpCommand
     _   -> Nothing
 
@@ -111,7 +94,8 @@ helpCommand key =
 
 categoryCommand :: Char -> Maybe Command
 categoryCommand key
-  | isDigit key && key /= '0' = Just (SelectCategoryCommand (digitToInt key))
+  | isDigit key && key /= '0' =
+      Just (SelectCategoryCommand (digitToInt key))
   | otherwise =
       case toLower key of
         'n' -> Just AddCategoryCommand

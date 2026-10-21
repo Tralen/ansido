@@ -58,7 +58,7 @@ The pure layers never throw. Domain failures use `DomainError`, persistence fail
 
 ## Reusable components
 
-The header, footer, category bar, notices, truncation, status blocks and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The board, help table and category table are assembled from Ansiform groups and tables rather than hand-formatted strings.
+The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are assembled from Ansiform tables rather than hand-formatted strings.
 
 ## Ansiform notes
 
@@ -67,7 +67,7 @@ Ansiform fits the application well. The split between pure builders and the draw
 Some friction points came up while building the interface:
 
 - The Haddock synopsis for `printerSolidLineCenter` lists a `Block`, but the implementation takes `[Block]`. The compiler catches it, but the documentation mismatch costs a build cycle.
-- `printerGroupsBordered` and the other bordered group printers expect every group to have the same number of blocks. Unequal groups produce misaligned borders, so the board pads every column with empty blocks. Automatic padding or a named helper would remove this trap.
+- `printerGroupsBordered` and the other bordered group printers expect every group to have the same number of blocks. Unequal groups produce misaligned borders. The earlier three-column board had to pad every column with empty blocks; the current task table avoids the problem by using `printerTableBordered`. Automatic padding or a named helper would still remove this trap for group-based layouts.
 - `readLineAt` already wraps `withLineInput`. The documentation says it reads a line with echo, but does not warn that wrapping it again breaks the terminal mode.
 - Multi-line prompts rely on exact line counts. A higher-level helper that takes a page plus a list of prompts and handles the cursor arithmetic would make forms less fragile.
 - The `Number` newtype is convenient, but its `Num` instance lets arithmetic read like plain integers, so code that subtracts needs care to keep the non-negative invariant obvious.
@@ -76,4 +76,4 @@ The feedback is positive overall: the library provided the groups, tables, rules
 
 ## Selection model
 
-`UiState` stores the selected screen, category, status column and row. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the current column. The board renders a window of eight rows per column, keeping the selected row visible and marking hidden rows with an ellipsis.
+`UiState` stores the selected screen, category and row. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the task list. The board renders a window of ten tasks, keeping the selected row visible and marking hidden rows with an ellipsis row.

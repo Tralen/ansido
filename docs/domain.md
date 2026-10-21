@@ -26,7 +26,7 @@ The domain module defines the vocabulary of the application and the only legal t
 2. The text cannot contain control characters, including tabs and newlines.
 3. The text cannot exceed its limit. The limits are 40 characters for a category name, 120 for a task title and 500 for a task note.
 
-Control characters are rejected because the persistence format is line and tab based. This keeps every title, name and note on a single record field. An empty task note is valid and is shown as `(empty)` on the details screen.
+Control characters are rejected because the persistence format is line and tab based. This keeps every title, name and note on a single record field. An empty task note is valid and is shown as `(empty)` in the note column.
 
 ## Workspace invariants
 
@@ -57,7 +57,9 @@ Identifiers are allocated from the current maximum plus one. Deleting the newest
 
 ## Status cycle
 
-The move command follows the cycle `Todo -> Doing -> Done -> Todo`. Column navigation is separate: `shiftStatus` clamps at the edges instead of cycling, so moving left from `Todo` keeps the selection on `Todo`.
+The forward key follows `Todo -> Doing -> Done -> Todo` through `nextStatus`. The backward key follows `Todo -> Done -> Doing -> Todo` through `previousStatus`. The application applies both with `moveTask`, so the transition stays pure and the task keeps its position in the table.
+
+Status labels are displayed in title case as `Todo`, `Doing` and `Done`, while the persistence format keeps the lowercase keys `todo`, `doing` and `done`.
 
 ## Queries
 

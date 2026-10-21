@@ -1,7 +1,7 @@
 -- | Reusable interface components.
 --
 -- Screens are assembled from these builders so the header, footer, category
--- bar, notices and text truncation behave the same everywhere.
+-- bar and notices behave the same everywhere.
 module Ansido.Ui.Components
   ( NoticeKind (..)
   , Notice (..)
@@ -13,8 +13,6 @@ module Ansido.Ui.Components
   , emptySection
   , keyHint
   , keyHintText
-  , statusBlock
-  , truncateVisible
   ) where
 
 --------------------------------------------------------------------------------
@@ -41,6 +39,7 @@ headerSection theme title subtitle =
         [ blockSimple title (themeHeader base) ]
     , printerEmpty 1
     , printerLineCenter 0 [ blockSimple subtitle (themeSubtitle base) ]
+    , printerEmpty 1
     ]
   where
     base = uiBase theme
@@ -107,26 +106,3 @@ keyHintText theme key label =
     [ (key, uiSelected theme)
     , (" " <> label, themeFooter (uiBase theme))
     ]
-
--- | Status label followed by the number of tasks.
-statusBlock :: UiTheme -> Status -> Int -> Block
-statusBlock theme status count =
-  blockCycle
-    [ (statusLabel status, statusStyle theme status)
-    , (" (" <> show count <> ")", themeMuted (uiBase theme))
-    ]
-
--- | Truncates text to a visible width, appending an ellipsis when needed.
-truncateVisible :: Int -> String -> String
-truncateVisible limit text
-  | textWidth text <= limit = text
-  | limit <= 3              = takeVisible limit text
-  | otherwise               = takeVisible (limit - 3) text <> "..."
-
-takeVisible :: Int -> String -> String
-takeVisible limit = go 0
-  where
-    go _ [] = []
-    go used (char : rest)
-      | used + charWidth char > limit = []
-      | otherwise = char : go (used + charWidth char) rest

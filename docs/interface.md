@@ -1,16 +1,15 @@
 # Interface
 
-The interface is built with Ansiform pages, sections, groups, tables and immediate input.
+The interface is built with Ansiform pages, sections, tables and immediate input.
 
 ## Screens
 
 | Screen | Purpose |
 | --- | --- |
-| Board | Todo, Doing and Done columns for the selected category. |
-| Details | Read-only view of the selected task, including its note. |
+| Categories | Category list with task counts and selection. This is always the initial screen. |
+| Board | Task table with title, note and state for the selected category. |
 | Help | Key reference in a bordered table. |
-| Categories | Category list with task counts and selection. |
-| Add task | Board preview with title and note prompts at the bottom. |
+| Add task | Task table preview with title and note prompts at the bottom. |
 | Add category | Category preview with a name prompt at the bottom. |
 
 Every screen shares the same header, category bar and footer. The header shows the application name and version. The category bar always shows all categories, with the active one highlighted. The footer lists the shortcuts available on the current screen.
@@ -21,23 +20,19 @@ Every screen shares the same header, category bar and footer. The header shows t
 
 | Key | Action |
 | --- | --- |
-| `↑` / `↓` | Move one row up or down. |
-| `←` / `→` | Move one column left or right. |
-| `h` / `j` / `k` / `l` | Vim-style alternative to the arrow keys. |
-| `1` / `2` / `3` | Focus Todo, Doing or Done. |
+| `↑` / `↓` | Select the previous or next task. |
+| `j` / `k` | Vim-style alternative to the vertical arrow keys. |
+| `Enter` | Move the selected task to the next state. |
+| `Backspace` | Move the selected task to the previous state. |
 | `a` | Open the new task prompt. |
-| `m` | Advance the selected task along the status cycle. |
 | `d` | Delete the selected task. |
-| `v` | Open task details. |
 | `c` | Open the category screen directly. |
 | `b` or `Esc` | Go back to the category selection. |
 | `?` | Open help. |
 | `r` | Redraw the current page. |
 | `x` | Exit. |
 
-### Details
-
-`b` or `Esc` returns to the board, `m` advances the task, `d` deletes it, `?` opens help and `x` exits.
+The states cycle in both directions: `Todo -> Doing -> Done -> Todo` for `Enter` and `Todo -> Done -> Doing -> Todo` for `Backspace`. The selected row stays in place because the table keeps insertion order.
 
 ### Categories
 
@@ -49,11 +44,11 @@ Every screen shares the same header, category bar and footer. The header shows t
 
 ### Back navigation
 
-The back key follows the screen hierarchy: details returns to the board, and the board returns to the category selection. From the category selection, back returns to the board. This makes `b` a consistent way to leave the notes view and reach the categories.
+The back key follows the screen hierarchy: the board returns to the category selection, and the category selection returns to the board. The help screen returns to the board.
 
 ### Prompts
 
-The task prompt has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the prompt. An empty note is valid and creates a task with `(empty)` on the details screen. The category prompt has a single line. Empty category input cancels and returns to the category selection.
+The task prompt has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection.
 
 Input is validated by the domain smart constructors, so an overlong title, an overlong note or a text with control characters becomes a notice instead of a broken record.
 
@@ -64,22 +59,21 @@ The page is composed of:
 1. A solid title bar with the application name.
 2. A blank line.
 3. A centered subtitle with the version.
-4. The category bar.
-5. A full-width rule below the category bar.
-6. An optional notice.
-7. The screen body.
-8. A solid footer bar.
-9. One or two optional prompt lines.
+4. A blank line.
+5. The category bar.
+6. A full-width rule below the category bar.
+7. An optional notice.
+8. The screen body.
+9. A solid footer bar.
+10. One or two optional prompt lines.
 
-The board uses three Ansiform groups inside a light border. Each group has a header with the status and task count. Column bodies are padded to the same height before rendering, because the bordered group printer expects every column to have the same number of blocks.
+The board is a single bordered table with three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color.
+
+The table format uses per-column maximum widths of 20 columns for the title, 40 for the note and 7 for the state, with an ellipsis when a title or note is truncated. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
 
 ## Windowing
 
-A column shows at most eight tasks. The visible window follows the selection, and a muted `...` line marks hidden tasks above or below. `windowAround` is pure and tested, so the selection never points outside the rendered window.
-
-## Truncation
-
-Task titles are truncated to 20 visible columns, including the three dots. `truncateVisible` uses Ansiform's `textWidth` and `charWidth`, so wide characters and combining marks do not break the alignment.
+The task table shows at most ten tasks. The visible window follows the selection, and a row with `...` in the title column marks hidden tasks above or below. `windowAround` is pure and tested, so the selection never points outside the rendered window.
 
 ## Text input
 
@@ -89,12 +83,14 @@ Prompts are drawn as the last sections of the page. For a new task, the title pr
 
 ## Key decoding
 
-Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. A lone `Esc` becomes the back key. Unrecognized sequences are treated as the back key.
+Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action.
 
 ## Theme
 
-`UiTheme` wraps the Ansiform `Theme` and adds semantic styles for Todo, Doing, Done, selection and notices. Status colors are yellow for Todo, cyan for Doing and green for Done. The header and footer use a blue bar with white text. Muted text uses the vivid black color, which most terminals render as gray.
+`UiTheme` wraps the Ansiform `Theme` and adds semantic styles for Todo, Doing, Done, selection and notices. Status colors are yellow for Todo, cyan for Doing and green for Done. The header and footer use a blue bar with white text.
+
+Muted text is white italic, used for labels, inactive category tabs, empty placeholders and hidden-row markers. The muted gray color is reserved for horizontal rules. The selected row uses bold white, while normal table text uses vivid white.
 
 ## Terminal behavior
 
-Colors are suppressed automatically when output is not a terminal, when `NO_COLOR` is set or when `TERM=dumb`. The board targets an 80-column terminal: three columns of at most 24 content columns plus borders fit within that width. Wider terminals simply receive more space around the header and footer bars.
+Colors are suppressed automatically when output is not a terminal, when `NO_COLOR` is set or when `TERM=dumb`. The task table is designed for an 80-column terminal: the three columns, padding and borders fit within 80 columns. Wider terminals simply receive more space around the header, footer and rules.

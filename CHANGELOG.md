@@ -3,6 +3,17 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.3.0
+- Replaced the three-column board with a single task table: title on the left, note as the main field and state in a small right column.
+- Removed the task details screen; the note is now visible directly in the table.
+- Navigation is vertical only, and `Enter` and `Backspace` cycle the selected task state forward and backward.
+- Kept `j` and `k` as a Vim-style alternative for vertical navigation.
+- Changed muted text to white italic, keeping the muted color only for horizontal rules.
+- Added a blank line between the subtitle and the category tabs.
+- The application now always starts on the category screen.
+- Updated the author, maintainer and license metadata.
+- Updated the tests for the table model, state cycling and the category start screen.
+
 ### 0.2.0
 - Added a note field to every task, shown on the details screen and persisted with the task.
 - Added a two-line prompt for the task title and task note.

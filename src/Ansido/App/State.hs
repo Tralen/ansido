@@ -24,14 +24,13 @@ import           Ansido.Ui.Components (Notice)
 -- | Which screen is currently visible.
 data Screen
   = BoardScreen
-  | DetailsScreen TaskId
   | HelpScreen
   | CategoryScreen
   | AddTaskScreen
   | AddCategoryScreen
   deriving (Eq, Show)
 
--- | Zero based position inside the selected column.
+-- | Zero based position inside the task table.
 newtype RowIndex = RowIndex { rowIndexValue :: Int }
   deriving (Eq, Ord, Show)
 
@@ -39,7 +38,6 @@ newtype RowIndex = RowIndex { rowIndexValue :: Int }
 data UiState = UiState
   { uiScreen   :: Screen
   , uiCategory :: Maybe CategoryId
-  , uiStatus   :: Status
   , uiRow      :: RowIndex
   , uiNotice   :: Maybe Notice
   } deriving (Eq, Show)
@@ -59,14 +57,11 @@ data Action
   = OpenBoard
   | OpenHelp
   | OpenCategories
-  | OpenDetails
   | OpenAddTask
   | OpenAddCategory
   | SelectCategory CategoryId
-  | FocusStatus Status
-  | MoveColumn Direction
   | MoveRow Direction
-  | AdvanceSelected
+  | CycleSelected Direction
   | DeleteSelected
   | SubmitTask String String
   | SubmitCategory String
@@ -74,7 +69,7 @@ data Action
   | ClearNotice
   deriving (Eq, Show)
 
--- | Builds the initial state, selecting the first category and the Todo column.
+-- | Builds the initial state on the category screen.
 initialAppState :: Workspace -> AppState
 initialAppState workspace =
   AppState
@@ -82,13 +77,12 @@ initialAppState workspace =
     , appUi = initialUiState workspace
     }
 
--- | Initial interface state for a workspace.
+-- | Initial interface state, always starting on the category screen.
 initialUiState :: Workspace -> UiState
 initialUiState workspace =
   UiState
-    { uiScreen = BoardScreen
+    { uiScreen = CategoryScreen
     , uiCategory = fmap categoryId (listToMaybe (workspaceCategories workspace))
-    , uiStatus = Todo
     , uiRow = RowIndex 0
     , uiNotice = Nothing
     }
@@ -99,22 +93,18 @@ currentCategory app =
   uiCategory (appUi app) >>= \identifier ->
     findCategory identifier (appWorkspace app)
 
--- | Tasks visible in the selected category and status column.
+-- | Tasks visible in the selected category, in insertion order.
 visibleTasks :: AppState -> [Task]
 visibleTasks app =
   case uiCategory (appUi app) of
     Nothing -> []
     Just identifier ->
-      tasksByStatus (uiStatus (appUi app))
-        (categoryTasks identifier (appWorkspace app))
+      categoryTasks identifier (appWorkspace app)
 
--- | Task under the cursor, or the task open on the details screen.
+-- | Task under the cursor.
 selectedTaskId :: AppState -> Maybe TaskId
 selectedTaskId app =
-  case uiScreen (appUi app) of
-    DetailsScreen identifier -> Just identifier
-    _ ->
-      taskId <$> indexMaybe (rowIndexValue (uiRow (appUi app))) (visibleTasks app)
+  taskId <$> indexMaybe (rowIndexValue (uiRow (appUi app))) (visibleTasks app)
 
 -- | Task under the cursor, when it still exists.
 selectedTask :: AppState -> Maybe Task

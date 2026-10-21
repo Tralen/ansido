@@ -29,9 +29,11 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Task and category transitions.
 - Workspace invariants.
 - Encode and decode round trips, version 1 compatibility and malformed inputs.
-- Window slicing and truncation.
-- Arrow key mapping and back navigation.
-- Initial state, navigation, clamping, submit, select and detail actions.
+- Window slicing.
+- Arrow and Enter/Backspace key mapping and back navigation.
+- Initial state on the category screen, vertical navigation, status cycling, submit and select actions.
+
+The current suite has 27 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 

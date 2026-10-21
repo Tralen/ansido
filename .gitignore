@@ -3,6 +3,6 @@ PROMPT.md
 HANDOFF.md
 REGRESSION.md
 .prompt/
-.agents/
+.handoff/
 dist-newstyle/
 cabal.project.local

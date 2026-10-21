@@ -4,6 +4,14 @@ A small task manager for the terminal, built with [Ansiform](https://hackage.has
 
 The name combines ANSI and "do", as in things to do.
 
+## Stack
+
+Haskell with Cabal, using [Ansiform](https://hackage.haskell.org/package/ansiform) for the terminal interface. Stack is not used.
+
+## Versioning
+
+PVP, single-sourced from the `ansido.cabal` file.
+
 ## Goal
 
 `ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, groups, styles, immediate input, forms, line input and redraw.

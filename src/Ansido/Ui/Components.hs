@@ -64,7 +64,7 @@ categorySection theme active categories =
   case categories of
     [] -> section
       [ printerLeft 1
-          (blockSimple "No categories yet, press c to create one." (themeMuted base)) ]
+          (blockSimple "No categories yet." (themeMuted base)) ]
     _  -> section
       [ printerLineLeft 1
           (blockSimple "Categories:" (themeMuted base) : map categoryBlock categories) ]

@@ -48,7 +48,7 @@ failStartup persistenceError = do
 runAppWith :: FilePath -> Workspace -> IO ()
 runAppWith path workspace =
   withImmediateInput $ do
-    let app = initialAppState workspace
+    let app = withDataFile path (initialAppState workspace)
     drawing <- Draw.start (renderPage defaultUiTheme app) defaultSettings
     loop path (LoopState app drawing)
 
@@ -90,10 +90,10 @@ execute path state command =
         (backAction (uiScreen (appUi (loopApp state))))
     HelpCommand -> applyAction path state OpenHelp
     CategoriesCommand -> applyAction path state OpenCategories
+    DetailsCommand -> applyAction path state OpenDetails
     AddTaskCommand -> startTaskInput path state
     AddCategoryCommand -> startCategoryInput path state
-    CycleCommand direction ->
-      applyAction path state (CycleSelected direction)
+    CycleCommand -> applyAction path state CycleSelected
     DeleteCommand -> applyAction path state DeleteSelected
     MoveRowCommand direction ->
       applyAction path state (MoveRow direction)

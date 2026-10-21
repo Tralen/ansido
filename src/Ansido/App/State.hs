@@ -8,6 +8,7 @@ module Ansido.App.State
   , Action (..)
   , initialAppState
   , initialUiState
+  , withDataFile
   , currentCategory
   , visibleTasks
   , selectedTaskId
@@ -24,6 +25,7 @@ import           Ansido.Ui.Components (Notice)
 -- | Which screen is currently visible.
 data Screen
   = BoardScreen
+  | DetailsScreen TaskId
   | HelpScreen
   | CategoryScreen
   | AddTaskScreen
@@ -46,6 +48,7 @@ data UiState = UiState
 data AppState = AppState
   { appWorkspace :: Workspace
   , appUi        :: UiState
+  , appDataFile  :: FilePath
   } deriving (Eq, Show)
 
 -- | Direction of a discrete movement.
@@ -57,11 +60,12 @@ data Action
   = OpenBoard
   | OpenHelp
   | OpenCategories
+  | OpenDetails
   | OpenAddTask
   | OpenAddCategory
   | SelectCategory CategoryId
   | MoveRow Direction
-  | CycleSelected Direction
+  | CycleSelected
   | DeleteSelected
   | SubmitTask String String
   | SubmitCategory String
@@ -75,7 +79,13 @@ initialAppState workspace =
   AppState
     { appWorkspace = workspace
     , appUi = initialUiState workspace
+    , appDataFile = ""
     }
+
+-- | Records the data file path shown on the help screen.
+withDataFile :: FilePath -> AppState -> AppState
+withDataFile path app =
+  app { appDataFile = path }
 
 -- | Initial interface state, always starting on the category screen.
 initialUiState :: Workspace -> UiState
@@ -101,10 +111,14 @@ visibleTasks app =
     Just identifier ->
       categoryTasks identifier (appWorkspace app)
 
--- | Task under the cursor.
+-- | Task under the cursor, or the task open on the details screen.
 selectedTaskId :: AppState -> Maybe TaskId
 selectedTaskId app =
-  taskId <$> indexMaybe (rowIndexValue (uiRow (appUi app))) (visibleTasks app)
+  case uiScreen (appUi app) of
+    DetailsScreen identifier -> Just identifier
+    _ ->
+      taskId <$> indexMaybe (rowIndexValue (uiRow (appUi app)))
+                         (visibleTasks app)
 
 -- | Task under the cursor, when it still exists.
 selectedTask :: AppState -> Maybe Task

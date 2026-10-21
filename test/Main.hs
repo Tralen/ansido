@@ -92,6 +92,7 @@ tests =
   , testSubmitCategory
   , testSelectUnknownCategory
   , testAddTaskWithoutCategory
+  , testOpenDetails
   , testArrowKeys
   , testBackActions
   ]
@@ -307,12 +308,9 @@ testCycleStatus =
       workspace <- fixtureWorkspace
       board <- rightOr (update (SelectCategory (categoryId category))
                                 (initialAppState workspace))
-      forward <- rightOr (update (CycleSelected Next) board)
-      backward <- rightOr (update (CycleSelected Previous) board)
+      forward <- rightOr (update CycleSelected board)
       checkEqual "forward" (Just Doing)
         (taskStatus <$> findTask (TaskId 1) (appWorkspace forward))
-      checkEqual "backward" (Just Done)
-        (taskStatus <$> findTask (TaskId 1) (appWorkspace backward))
   )
 
 testMoveRow :: (String, Check)
@@ -375,6 +373,20 @@ testAddTaskWithoutCategory =
         Nothing     -> Left "no notice"
   )
 
+testOpenDetails :: (String, Check)
+testOpenDetails =
+  ( "open details"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      let app = withDataFile "board.tsv" (initialAppState workspace)
+      board <- rightOr (update (SelectCategory (categoryId category)) app)
+      details <- rightOr (update OpenDetails board)
+      checkEqual "details screen" (DetailsScreen (TaskId 1))
+        (uiScreen (appUi details))
+      checkEqual "data file" "board.tsv" (appDataFile details)
+  )
+
 testArrowKeys :: (String, Check)
 testArrowKeys =
   ( "arrow keys"
@@ -387,10 +399,12 @@ testArrowKeys =
         (commandForKey BoardScreen KeyLeft)
       checkEqual "right" Nothing
         (commandForKey BoardScreen KeyRight)
-      checkEqual "enter" (Just (CycleCommand Next))
+      checkEqual "enter" (Just AddTaskCommand)
         (commandForKey BoardScreen KeyEnter)
-      checkEqual "backspace" (Just (CycleCommand Previous))
+      checkEqual "backspace" (Just BackCommand)
         (commandForKey BoardScreen KeyBackspace)
+      checkEqual "space" (Just CycleCommand)
+        (commandForKey BoardScreen (KeyCharacter ' '))
       checkEqual "escape" (Just BackCommand)
         (commandForKey BoardScreen KeyEscape)
       checkEqual "help up" Nothing
@@ -402,6 +416,8 @@ testBackActions =
   ( "back actions"
   , do
       checkEqual "board back" OpenCategories (backAction BoardScreen)
+      checkEqual "details back" OpenBoard
+        (backAction (DetailsScreen (TaskId 1)))
       checkEqual "category back" OpenBoard (backAction CategoryScreen)
   )
 

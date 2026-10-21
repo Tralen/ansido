@@ -3,6 +3,16 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.4.0
+- Added a `v view` screen that shows the full task note with word wrap.
+- Added the data file path to the help screen.
+- Moved notices below the task table so the table does not shift when a notice appears.
+- Removed the redundant `Categories` title; the category table now starts after the blank line.
+- Changed the Todo state color from yellow to red.
+- Changed the keys: `Enter` adds a task, `Space` cycles the selected task state and `Backspace` goes back.
+- Removed the backward state cycle and the `a`, `b` and `c` shortcuts.
+- Added tests for the details view, the data file path and the new key mapping.
+
 ### 0.3.0
 - Replaced the three-column board with a single task table: title on the left, note as the main field and state in a small right column.
 - Removed the task details screen; the note is now visible directly in the table.

@@ -39,7 +39,7 @@ defaultUiTheme = UiTheme
       , themeTableHeader = bold yellow'
       , themeTableBody   = normal white'
       }
-  , uiTodo        = bold yellow'
+  , uiTodo        = bold red'
   , uiDoing       = bold cyan'
   , uiDone        = bold green'
   , uiSelected    = bold white'

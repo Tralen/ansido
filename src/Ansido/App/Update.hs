@@ -22,11 +22,12 @@ update action app =
     OpenBoard -> Right (setScreen BoardScreen app)
     OpenHelp -> Right (setScreen HelpScreen app)
     OpenCategories -> Right (setScreen CategoryScreen app)
+    OpenDetails -> openDetails app
     OpenAddTask -> openAddTask app
     OpenAddCategory -> Right (setScreen AddCategoryScreen app)
     SelectCategory identifier -> selectCategory identifier app
     MoveRow direction -> Right (moveRow direction app)
-    CycleSelected direction -> cycleSelected direction app
+    CycleSelected -> cycleSelected app
     DeleteSelected -> deleteSelected app
     SubmitTask rawTitle rawContent -> submitTask rawTitle rawContent app
     SubmitCategory rawName -> submitCategory rawName app
@@ -38,6 +39,7 @@ backAction :: Screen -> Action
 backAction screen =
   case screen of
     BoardScreen       -> OpenCategories
+    DetailsScreen _   -> OpenBoard
     CategoryScreen    -> OpenBoard
     HelpScreen        -> OpenBoard
     AddTaskScreen     -> OpenBoard
@@ -54,6 +56,14 @@ setScreen screen app =
 clearNotice :: AppState -> AppState
 clearNotice app =
   app { appUi = (appUi app) { uiNotice = Nothing } }
+
+openDetails :: AppState -> Either DomainError AppState
+openDetails app =
+  case selectedTask app of
+    Just task ->
+      Right (setScreen (DetailsScreen (taskId task)) app)
+    Nothing ->
+      Right (withNotice (Notice NoticeInfo "No task selected.") app)
 
 openAddTask :: AppState -> Either DomainError AppState
 openAddTask app =
@@ -90,15 +100,13 @@ moveRow direction app =
 -- Tasks.
 --------------------------------------------------------------------------------
 
-cycleSelected :: Direction -> AppState -> Either DomainError AppState
-cycleSelected direction app =
+cycleSelected :: AppState -> Either DomainError AppState
+cycleSelected app =
   case selectedTask app of
     Nothing ->
       Right (withNotice (Notice NoticeInfo "No task selected.") app)
     Just task -> do
-      let next = case direction of
-            Next     -> nextStatus (taskStatus task)
-            Previous -> previousStatus (taskStatus task)
+      let next = nextStatus (taskStatus task)
       workspace <- moveTask (taskId task) next (appWorkspace app)
       let notice = Notice NoticeInfo
             ("State changed to " <> statusLabel next <> ".")

@@ -44,16 +44,19 @@ renderPage theme app =
         AddCategoryScreen -> [promptLine theme categoryPrompt]
         _                 -> []
 
--- | Body of the current screen, preceded by an optional notice.
+-- | Body of the current screen, followed by an optional notice.
 screenBody :: UiTheme -> AppState -> [Section]
 screenBody theme app =
-  noticeSections theme app
-    <> case uiScreen (appUi app) of
-         BoardScreen       -> boardBody theme app
-         HelpScreen        -> helpBody theme
-         CategoryScreen    -> categoriesBody theme app
-         AddTaskScreen     -> boardBody theme app
-         AddCategoryScreen -> categoriesBody theme app
+  body <> noticeSections theme app
+  where
+    body =
+      case uiScreen (appUi app) of
+        BoardScreen       -> boardBody theme app
+        DetailsScreen _   -> detailsBody theme app
+        HelpScreen        -> helpBody theme app
+        CategoryScreen    -> categoriesBody theme app
+        AddTaskScreen     -> boardBody theme app
+        AddCategoryScreen -> categoriesBody theme app
 
 noticeSections :: UiTheme -> AppState -> [Section]
 noticeSections theme app =
@@ -67,9 +70,10 @@ noticeSections theme app =
 boardBody :: UiTheme -> AppState -> [Section]
 boardBody theme app
   | null (workspaceCategories (appWorkspace app)) =
-      [ emptySection theme "Create a category with c to get started." ]
+      [ emptySection theme
+          "Create a category first, press Backspace to open categories." ]
   | null (visibleTasks app) =
-      [ emptySection theme "No tasks yet, press a to add one." ]
+      [ emptySection theme "No tasks yet, press Enter to add one." ]
   | otherwise =
       [ boardTableSection theme app ]
 
@@ -134,16 +138,79 @@ markerRow theme =
   , blockEmpty
   ]
 
+-- Details.
+--------------------------------------------------------------------------------
+
+detailsBody :: UiTheme -> AppState -> [Section]
+detailsBody theme app =
+  case selectedTask app of
+    Nothing ->
+      [ emptySection theme
+          "No task selected. Press Backspace to return to the board." ]
+    Just task ->
+      [ sectionBody 1
+          [ printerLeft 1 (fieldBlock theme "Title"
+              (taskTitleText (taskTitle task))
+              (uiSelected theme))
+          , printerLeft 1 (fieldBlock theme "State"
+              (statusLabel (taskStatus task))
+              (statusStyle theme (taskStatus task)))
+          , printerLeft 1 (fieldBlock theme "Category"
+              (categoryNameFor (appWorkspace app) (taskCategory task))
+              (themeTableBody base))
+          , printerLeft 1 (blockSimple "Note:" (themeMuted base))
+          , printerParagraph 3 0
+              [ blockSimple (taskNoteText task) (taskNoteStyle theme task) ]
+          ]
+      ]
+  where
+    base = uiBase theme
+
+taskNoteText :: Task -> String
+taskNoteText task
+  | null (taskContentText (taskContent task)) = "(empty)"
+  | otherwise = taskContentText (taskContent task)
+
+taskNoteStyle :: UiTheme -> Task -> Style
+taskNoteStyle theme task
+  | null (taskContentText (taskContent task)) = themeMuted (uiBase theme)
+  | otherwise = themeTableBody (uiBase theme)
+
+fieldBlock :: UiTheme -> String -> String -> Style -> Block
+fieldBlock theme label value style =
+  blockCycle
+    [ (label, themeMuted (uiBase theme))
+    , (": ", themeMuted (uiBase theme))
+    , (value, style)
+    ]
+
+categoryNameFor :: Workspace -> CategoryId -> String
+categoryNameFor workspace identifier =
+  case findCategory identifier workspace of
+    Just category -> categoryNameText (categoryName category)
+    Nothing       -> "(unknown)"
+
 -- Help.
 --------------------------------------------------------------------------------
 
-helpBody :: UiTheme -> [Section]
-helpBody theme =
+helpBody :: UiTheme -> AppState -> [Section]
+helpBody theme app =
   [ titleSection theme "Help"
   , sectionBody 1
       [ printerTableBordered BordersLight defaultTableFormat 1 1
-          (helpTable theme) ]
+          (helpTable theme)
+      , printerLeft 1 (blockSimple "Data file:" (themeMuted base))
+      , printerParagraph 3 0
+          [ blockSimple (dataFilePath app) (themeTableBody base) ]
+      ]
   ]
+  where
+    base = uiBase theme
+
+dataFilePath :: AppState -> String
+dataFilePath app
+  | null (appDataFile app) = "(not set)"
+  | otherwise = appDataFile app
 
 helpTable :: UiTheme -> Maybe Table
 helpTable theme =
@@ -161,14 +228,13 @@ helpEntries :: [(String, String)]
 helpEntries =
   [ ("↑ / ↓", "select a task")
   , ("j / k", "vim alternative")
-  , ("Enter", "next state")
-  , ("Backspace", "previous state")
-  , ("a", "add a task")
+  , ("Enter", "add a task")
+  , ("Space", "cycle the selected task state")
   , ("d", "delete the selected task")
-  , ("c", "open categories")
+  , ("v", "view the full note")
+  , ("Backspace / Esc", "go back one screen")
   , ("n", "create a category")
   , ("1 .. 9", "select a category")
-  , ("b / Esc", "go back one screen")
   , ("r", "redraw the screen")
   , ("?", "open this help")
   , ("x", "exit")
@@ -179,8 +245,7 @@ helpEntries =
 
 categoriesBody :: UiTheme -> AppState -> [Section]
 categoriesBody theme app =
-  [ titleSection theme "Categories"
-  , sectionBody 1
+  [ sectionBody 1
       [ printerTableBordered BordersLight defaultTableFormat 1 1
           (categoryTable theme app)
       , printerLeft 1
@@ -223,22 +288,28 @@ footerHints theme screen =
   case screen of
     BoardScreen ->
       [ keyHintText theme "↑↓" "select"
-      , keyHintText theme "Enter" "next state"
-      , keyHintText theme "⌫" "prev state"
-      , keyHint theme 'a' "add"
+      , keyHintText theme "Enter" "add"
+      , keyHintText theme "Space" "state"
       , keyHint theme 'd' "del"
-      , keyHint theme 'b' "back"
+      , keyHint theme 'v' "view"
+      , keyHintText theme "⌫" "back"
       , keyHint theme '?' "help"
       , keyHint theme 'x' "exit"
       ]
+    DetailsScreen _ ->
+      [ keyHintText theme "⌫" "back"
+      , keyHintText theme "Space" "state"
+      , keyHint theme 'd' "del"
+      , keyHint theme 'x' "exit"
+      ]
     HelpScreen ->
-      [ keyHint theme 'b' "back"
+      [ keyHintText theme "⌫" "back"
       , keyHint theme 'x' "exit"
       ]
     CategoryScreen ->
       [ keyHint theme 'n' "new"
       , keyHintText theme "1-9" "select"
-      , keyHint theme 'b' "back"
+      , keyHintText theme "⌫" "back"
       , keyHint theme 'x' "exit"
       ]
     AddTaskScreen ->

@@ -10,15 +10,15 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.3.0 is functional. It includes:
+Version 0.4.0 is functional. It includes:
 
 - Task category creation and selection.
 - A single task table with title, note and state columns.
 - Vertical navigation with arrow keys or `j` and `k`.
-- `Enter` and `Backspace` to cycle the selected task state forward and backward.
-- Task creation with a title and a note.
-- Task deletion.
-- A help page.
+- `Enter` to add a task and `Space` to cycle the selected task state.
+- `v` to view the full note with word wrap.
+- `Backspace` to go back and `d` to delete.
+- A help page with the data file path.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
 - `R` to redraw and `X` to exit.
@@ -39,7 +39,7 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-Press `c` to open categories and `n` to create the first one. Select a category with its number. Press `a` on the task table to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Enter` and `Backspace` to change its state, `d` to delete it, `b` to go back and `?` for the full key reference.
+The application opens on the category screen. Press `n` to create the first category and select it with its number. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its state, `v` to read the full note, `d` to delete it, `Backspace` to go back and `?` for the full key reference.
 
 ## Documentation
 

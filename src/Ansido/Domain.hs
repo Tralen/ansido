@@ -35,7 +35,6 @@ module Ansido.Domain
   , statusKey
   , statusFromKey
   , nextStatus
-  , previousStatus
   , indexMaybe
     -- * Transitions.
   , addCategory
@@ -124,17 +123,11 @@ statusFromKey key =
     "done"  -> Just Done
     _       -> Nothing
 
--- | The next status in the cycle used by the forward state key.
+-- | The next status in the cycle used by the state key.
 nextStatus :: Status -> Status
 nextStatus Todo  = Doing
 nextStatus Doing = Done
 nextStatus Done  = Todo
-
--- | The previous status in the cycle used by the backward state key.
-previousStatus :: Status -> Status
-previousStatus Todo  = Done
-previousStatus Doing = Todo
-previousStatus Done  = Doing
 
 --------------------------------------------------------------------------------
 

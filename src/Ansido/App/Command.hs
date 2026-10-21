@@ -32,9 +32,10 @@ data Command
   | HelpCommand
   | BackCommand
   | CategoriesCommand
+  | DetailsCommand
   | AddTaskCommand
   | AddCategoryCommand
-  | CycleCommand Direction
+  | CycleCommand
   | DeleteCommand
   | MoveRowCommand Direction
   | SelectCategoryCommand Int
@@ -45,12 +46,12 @@ commandForKey :: Screen -> Key -> Maybe Command
 commandForKey screen key =
   case key of
     KeyEscape -> Just BackCommand
+    KeyBackspace -> Just BackCommand
     KeyUp    -> boardOnly (MoveRowCommand Previous)
     KeyDown  -> boardOnly (MoveRowCommand Next)
     KeyLeft  -> Nothing
     KeyRight -> Nothing
-    KeyEnter -> boardOnly (CycleCommand Next)
-    KeyBackspace -> boardOnly (CycleCommand Previous)
+    KeyEnter -> boardOnly AddTaskCommand
     KeyCharacter char -> characterCommand screen char
   where
     boardOnly command =
@@ -68,6 +69,7 @@ characterCommand screen key =
     _ ->
       case screen of
         BoardScreen      -> boardCommand (toLower key)
+        DetailsScreen _  -> detailsCommand (toLower key)
         HelpScreen       -> helpCommand (toLower key)
         CategoryScreen   -> categoryCommand key
         AddTaskScreen    -> Nothing
@@ -76,19 +78,25 @@ characterCommand screen key =
 boardCommand :: Char -> Maybe Command
 boardCommand key =
   case key of
-    'a' -> Just AddTaskCommand
-    'c' -> Just CategoriesCommand
+    ' ' -> Just CycleCommand
     'd' -> Just DeleteCommand
+    'v' -> Just DetailsCommand
     'k' -> Just (MoveRowCommand Previous)
     'j' -> Just (MoveRowCommand Next)
-    'b' -> Just BackCommand
+    '?' -> Just HelpCommand
+    _   -> Nothing
+
+detailsCommand :: Char -> Maybe Command
+detailsCommand key =
+  case key of
+    ' ' -> Just CycleCommand
+    'd' -> Just DeleteCommand
     '?' -> Just HelpCommand
     _   -> Nothing
 
 helpCommand :: Char -> Maybe Command
 helpCommand key =
   case key of
-    'b' -> Just BackCommand
     '?' -> Just BackCommand
     _   -> Nothing
 
@@ -99,6 +107,5 @@ categoryCommand key
   | otherwise =
       case toLower key of
         'n' -> Just AddCategoryCommand
-        'b' -> Just BackCommand
         '?' -> Just HelpCommand
         _   -> Nothing

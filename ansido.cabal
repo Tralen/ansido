@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               ansido
-version:            0.3.0
+version:            0.4.0
 synopsis:           A terminal task manager built with Ansiform.
 description:
   A small task manager for the terminal. It keeps categories and tasks in a

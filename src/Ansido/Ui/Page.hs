@@ -339,10 +339,10 @@ dataFilePath app
 
 helpEntries :: [(String, String)]
 helpEntries =
-  [ ("↑ / ↓", "select a task")
+  [ ("↑ / ↓", "select a task or category")
   , ("j / k", "vim alternative")
   , ("w / s", "wasd alternative")
-  , ("Enter", "add a task")
+  , ("Enter", "add a task or open a category")
   , ("Space", "cycle the selected task status")
   , ("e", "edit the selected task or category")
   , ("f (board)", "filter by status")
@@ -350,7 +350,7 @@ helpEntries =
   , ("v", "view the full note")
   , ("Backspace / Esc", "go back one screen")
   , ("n", "create a category")
-  , ("1 .. 9", "select a category")
+  , ("1 .. 9", "open a category")
   , ("r", "redraw the screen")
   , ("?", "open this help")
   , ("x", "exit")
@@ -465,8 +465,9 @@ footerHints theme screen =
       , keyHint theme 'x' "exit"
       ]
     CategoryScreen ->
-      [ keyHint theme 'n' "new"
-      , keyHintText theme "1-9" "select"
+      [ blockSimple "↑↓" (uiSelected theme)
+      , keyHintText theme "Enter" "open"
+      , keyHint theme 'n' "new"
       , keyHint theme 'e' "edit"
       , keyHintText theme "Del" "del"
       , keyHintText theme "⌫" "back"

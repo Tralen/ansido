@@ -43,6 +43,8 @@ data Command
   | CycleCommand
   | DeleteCommand
   | MoveRowCommand Direction
+  | MoveCategoryCommand Direction
+  | OpenBoardCommand
   | SelectCategoryCommand Int
   deriving (Eq, Show)
 
@@ -52,18 +54,27 @@ commandForKey screen key =
   case key of
     KeyEscape -> Just BackCommand
     KeyBackspace -> Just BackCommand
-    KeyUp    -> boardOnly (MoveRowCommand Previous)
-    KeyDown  -> boardOnly (MoveRowCommand Next)
+    KeyUp    -> directionCommand screen Previous
+    KeyDown  -> directionCommand screen Next
     KeyLeft  -> Nothing
     KeyRight -> Nothing
     KeyDelete -> deleteCommand screen
-    KeyEnter -> boardOnly AddTaskCommand
+    KeyEnter -> enterCommand screen
     KeyCharacter char -> characterCommand screen char
-  where
-    boardOnly command =
-      case screen of
-        BoardScreen -> Just command
-        _           -> Nothing
+
+directionCommand :: Screen -> Direction -> Maybe Command
+directionCommand screen direction =
+  case screen of
+    BoardScreen    -> Just (MoveRowCommand direction)
+    CategoryScreen -> Just (MoveCategoryCommand direction)
+    _              -> Nothing
+
+enterCommand :: Screen -> Maybe Command
+enterCommand screen =
+  case screen of
+    BoardScreen    -> Just AddTaskCommand
+    CategoryScreen -> Just OpenBoardCommand
+    _              -> Nothing
 
 deleteCommand :: Screen -> Maybe Command
 deleteCommand screen =
@@ -127,5 +138,9 @@ categoryCommand key
       case toLower key of
         'n' -> Just AddCategoryCommand
         'e' -> Just EditCategoryCommand
+        'j' -> Just (MoveCategoryCommand Next)
+        'k' -> Just (MoveCategoryCommand Previous)
+        'w' -> Just (MoveCategoryCommand Previous)
+        's' -> Just (MoveCategoryCommand Next)
         '?' -> Just HelpCommand
         _   -> Nothing

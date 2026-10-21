@@ -31,6 +31,7 @@ update action app =
     OpenEditCategory -> openEditCategory app
     SelectCategory identifier -> selectCategory identifier app
     MoveRow direction -> Right (moveRow direction app)
+    MoveCategory direction -> Right (moveCategory direction app)
     CycleFilter -> Right (cycleFilter app)
     CycleSelected -> cycleSelected app
     DeleteSelected -> deleteSelected app
@@ -133,6 +134,26 @@ moveRow direction app =
         Previous -> max 0 (current - 1)
         Next     -> min limit (current + 1)
   in app { appUi = (appUi app) { uiRow = RowIndex next } }
+
+-- | Moves the highlighted category without leaving the category screen.
+moveCategory :: Direction -> AppState -> AppState
+moveCategory direction app =
+  app { appUi = (appUi app)
+          { uiCategory = fmap categoryId (indexMaybe next categories)
+          , uiRow = RowIndex 0
+          , uiNotice = Nothing
+          } }
+  where
+    categories = workspaceCategories (appWorkspace app)
+    limit = max 0 (length categories - 1)
+    current =
+      case uiCategory (appUi app) >>=
+           \identifier -> findIndex ((== identifier) . categoryId) categories of
+        Just index -> index
+        Nothing    -> 0
+    next = case direction of
+      Previous -> max 0 (current - 1)
+      Next     -> min limit (current + 1)
 
 -- Tasks.
 --------------------------------------------------------------------------------

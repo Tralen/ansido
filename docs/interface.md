@@ -6,7 +6,7 @@ The interface is built with Ansiform pages, sections, borderless tables, forms a
 
 | Screen | Purpose |
 | --- | --- |
-| Categories | Category list with task counts and selection. This is always the initial screen. |
+| Categories | Category list with task counts, highlighting and navigation. This is always the initial screen. |
 | Board | Task table with title, note and status for the selected category, with a live status filter. |
 | Details | Full task view with the complete note wrapped across lines. |
 | Edit task | Task form with the current content above the prompts. |
@@ -53,9 +53,11 @@ Ansiform forms read complete lines, so the current value is shown above the prom
 
 ### Categories
 
-`n` opens the new category prompt, `1` to `9` select a category and open its board, `e` renames the active category, `Del` deletes it together with its tasks, `Backspace` or `Esc` returns to the board and `x` exits.
+`↑` and `↓`, `j` and `k`, or `w` and `s` move the highlighted category without leaving the screen. `Enter` opens the board of the highlighted category, `1` to `9` open a category directly, `n` opens the new category prompt, `e` renames the highlighted category, `Del` deletes it together with its tasks, `Backspace` or `Esc` returns to the board and `x` exits.
 
-The hint `Press n to create a category.` is shown below the category table only while there are no categories. The category footer lists `n new`, `1-9 select`, `e edit`, `Del del`, the back icon and `x exit`.
+The hint `Press n to create a category.` is shown below the category table only while there are no categories. The category footer lists the arrow keys, `Enter open`, `n new`, `e edit`, `Del del`, the back icon and `x exit`.
+
+Moving the highlight resets the task row so the next board opens on its first task. The category bar and the table row highlight the same category.
 
 ### Edit category
 

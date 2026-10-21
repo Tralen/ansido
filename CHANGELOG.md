@@ -3,6 +3,14 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.8.0
+- Added arrow, `j`/`k` and `w`/`s` navigation to the category screen, so a category can be highlighted without opening its board.
+- `Enter` now opens the board of the highlighted category.
+- `e` and `Del` act on the highlighted category, which makes renaming and deletion visible from the category screen.
+- Replaced the category footer digit hint with `Enter open`; the digits `1` to `9` still open a category directly.
+- Added the GitHub homepage, issue tracker and source repository metadata to the package.
+- Added tests for category navigation and the new category keys.
+
 ### 0.7.0
 - Added category editing with the `e` key on the category screen; the form reuses the category prompt and keeps the current name when the input is empty.
 - Added category deletion with the `Del` key; deleting a category also removes its tasks, and the notice reports how many tasks were removed.

@@ -103,6 +103,7 @@ tests =
   , testEditTask
   , testEditBlankKeeps
   , testMoveRow
+  , testMoveCategory
   , testSubmitTask
   , testSubmitCategory
   , testSelectUnknownCategory
@@ -497,6 +498,32 @@ testMoveRow =
       checkEqual "row clamped" 1 (rowIndexValue (uiRow (appUi app')))
   )
 
+testMoveCategory :: (String, Check)
+testMoveCategory =
+  ( "move category"
+  , do
+      workspace <- fixtureWorkspace
+      name <- rightOr (mkCategoryName "Personal")
+      (_, twoCategories) <- rightOr (addCategory name workspace)
+      let app = initialAppState twoCategories
+      next <- rightOr (update (MoveCategory Next) app)
+      checkEqual "next category" (Just (CategoryId 2)) (uiCategory (appUi next))
+      checkEqual "category screen kept" CategoryScreen (uiScreen (appUi next))
+      checkEqual "row reset" 0 (rowIndexValue (uiRow (appUi next)))
+      clamped <- rightOr (update (MoveCategory Next) next)
+      checkEqual "last category clamped" (Just (CategoryId 2))
+        (uiCategory (appUi clamped))
+      previous <- rightOr (update (MoveCategory Previous) clamped)
+      checkEqual "previous category" (Just (CategoryId 1))
+        (uiCategory (appUi previous))
+      first <- rightOr (update (MoveCategory Previous) previous)
+      checkEqual "first category clamped" (Just (CategoryId 1))
+        (uiCategory (appUi first))
+      empty <- rightOr (update (MoveCategory Next) (initialAppState emptyWorkspace))
+      checkEqual "no category on empty workspace" Nothing
+        (uiCategory (appUi empty))
+  )
+
 testSubmitTask :: (String, Check)
 testSubmitTask =
   ( "submit task"
@@ -684,6 +711,16 @@ testCategoryKeys =
         (commandForKey CategoryScreen (KeyCharacter 'e'))
       checkEqual "delete removes a category" (Just DeleteCategoryCommand)
         (commandForKey CategoryScreen KeyDelete)
+      checkEqual "up moves the highlight" (Just (MoveCategoryCommand Previous))
+        (commandForKey CategoryScreen KeyUp)
+      checkEqual "down moves the highlight" (Just (MoveCategoryCommand Next))
+        (commandForKey CategoryScreen KeyDown)
+      checkEqual "k moves up" (Just (MoveCategoryCommand Previous))
+        (commandForKey CategoryScreen (KeyCharacter 'k'))
+      checkEqual "j moves down" (Just (MoveCategoryCommand Next))
+        (commandForKey CategoryScreen (KeyCharacter 'j'))
+      checkEqual "enter opens the board" (Just OpenBoardCommand)
+        (commandForKey CategoryScreen KeyEnter)
       checkEqual "digits select" (Just (SelectCategoryCommand 2))
         (commandForKey CategoryScreen (KeyCharacter '2'))
       checkEqual "edit form ignores e" Nothing

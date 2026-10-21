@@ -10,9 +10,10 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.7.0 is functional. It includes:
+Version 0.8.0 is functional. It includes:
 
 - Task category creation, selection, editing and deletion.
+- Arrow, `j`/`k` and `w`/`s` navigation on the category screen, with `Enter` opening the board.
 - A single task table with title, note and status columns, without borders.
 - Vertical navigation with arrow keys, `j` and `k`, or `w` and `s`.
 - A status filter that cycles through all, Todo, Doing and Done.
@@ -41,7 +42,7 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-The application opens on the category screen. Press `n` to create the first category and select it with its number. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the active category and `Del` deletes it together with its tasks.
+The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks.
 
 ## Documentation
 

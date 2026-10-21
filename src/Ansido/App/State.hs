@@ -78,6 +78,7 @@ data Action
   | OpenEditCategory
   | SelectCategory CategoryId
   | MoveRow Direction
+  | MoveCategory Direction
   | CycleFilter
   | CycleSelected
   | DeleteSelected

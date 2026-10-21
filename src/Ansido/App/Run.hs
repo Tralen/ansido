@@ -101,6 +101,9 @@ execute path state command =
     DeleteCommand -> applyAction path state DeleteSelected
     MoveRowCommand direction ->
       applyAction path state (MoveRow direction)
+    MoveCategoryCommand direction ->
+      applyAction path state (MoveCategory direction)
+    OpenBoardCommand -> applyAction path state OpenBoard
     SelectCategoryCommand position ->
       selectCategoryByPosition path state position
 

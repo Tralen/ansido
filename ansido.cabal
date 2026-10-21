@@ -1,11 +1,13 @@
 cabal-version:      2.4
 name:               ansido
-version:            0.7.0
+version:            0.8.0
 synopsis:           A terminal task manager built with Ansiform.
 description:
   A small task manager for the terminal. It keeps categories and tasks in a
   plain text file and draws a board with Todo, Doing and Done columns using
   the Ansiform formatting library.
+homepage:           https://github.com/Tralen/ansido#readme
+bug-reports:        https://github.com/Tralen/ansido/issues
 license:            MIT
 license-file:       LICENSE
 author:             Tunai Raiol
@@ -18,6 +20,10 @@ extra-doc-files:
   CHANGELOG.md
   README.md
   docs/*.md
+
+source-repository head
+  type:     git
+  location: https://github.com/Tralen/ansido
 
 common commons
   default-language: Haskell2010

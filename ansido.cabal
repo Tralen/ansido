@@ -1,0 +1,66 @@
+cabal-version:      2.4
+name:               ansido
+version:            0.1.0
+synopsis:           A terminal task manager built with Ansiform.
+description:
+  A small task manager for the terminal. It keeps categories and tasks in a
+  plain text file and draws a board with Todo, Doing and Done columns using
+  the Ansiform formatting library.
+license:            MIT
+license-file:       LICENSE
+author:             ansido contributors
+maintainer:         ansido contributors
+category:           User Interfaces
+build-type:         Simple
+tested-with:        GHC == 9.14.1
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+  docs/*.md
+
+common commons
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+
+library
+  import:           commons
+  hs-source-dirs:   src
+  exposed-modules:
+    Ansido.App.Command
+    Ansido.App.Run
+    Ansido.App.State
+    Ansido.App.Update
+    Ansido.Domain
+    Ansido.Persistence
+    Ansido.Ui.Components
+    Ansido.Ui.Page
+    Ansido.Ui.Theme
+    Ansido.Version
+  autogen-modules:  Paths_ansido
+  other-modules:    Paths_ansido
+  build-depends:
+    ansiform >= 0.7.8.5 && < 0.8,
+    base     >= 4.14    && < 5,
+    directory >= 1.3    && < 1.4,
+    filepath  >= 1.4    && < 1.6
+
+executable ansido
+  import:           commons
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  build-depends:
+    ansido,
+    base >= 4.14 && < 5
+
+test-suite ansido-test
+  import:           commons
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  build-depends:
+    ansido,
+    base >= 4.14 && < 5

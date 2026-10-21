@@ -1,0 +1,8 @@
+TODO.md
+PROMPT.md
+HANDOFF.md
+REGRESSION.md
+.prompt/
+.agents/
+dist-newstyle/
+cabal.project.local

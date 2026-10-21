@@ -1,6 +1,7 @@
 -- | Application state and the actions that can change it.
 module Ansido.App.State
   ( Screen (..)
+  , Filter (..)
   , RowIndex (..)
   , UiState (..)
   , AppState (..)
@@ -13,6 +14,9 @@ module Ansido.App.State
   , visibleTasks
   , selectedTaskId
   , selectedTask
+  , filterTasks
+  , filterLabel
+  , nextFilter
   , withNotice
   ) where
 
@@ -26,6 +30,7 @@ import           Ansido.Ui.Components (Notice)
 data Screen
   = BoardScreen
   | DetailsScreen TaskId
+  | EditTaskScreen TaskId
   | HelpScreen
   | CategoryScreen
   | AddTaskScreen
@@ -36,10 +41,15 @@ data Screen
 newtype RowIndex = RowIndex { rowIndexValue :: Int }
   deriving (Eq, Ord, Show)
 
+-- | Which states the table shows. 'ShowAll' disables the filter.
+data Filter = ShowAll | OnlyStatus Status
+  deriving (Eq, Show)
+
 -- | Everything the interface needs besides the workspace.
 data UiState = UiState
   { uiScreen   :: Screen
   , uiCategory :: Maybe CategoryId
+  , uiFilter   :: Filter
   , uiRow      :: RowIndex
   , uiNotice   :: Maybe Notice
   } deriving (Eq, Show)
@@ -61,13 +71,16 @@ data Action
   | OpenHelp
   | OpenCategories
   | OpenDetails
+  | OpenEditTask
   | OpenAddTask
   | OpenAddCategory
   | SelectCategory CategoryId
   | MoveRow Direction
+  | CycleFilter
   | CycleSelected
   | DeleteSelected
   | SubmitTask String String
+  | SubmitEdit TaskId String String
   | SubmitCategory String
   | SetNotice Notice
   | ClearNotice
@@ -93,6 +106,7 @@ initialUiState workspace =
   UiState
     { uiScreen = CategoryScreen
     , uiCategory = fmap categoryId (listToMaybe (workspaceCategories workspace))
+    , uiFilter = ShowAll
     , uiRow = RowIndex 0
     , uiNotice = Nothing
     }
@@ -109,13 +123,32 @@ visibleTasks app =
   case uiCategory (appUi app) of
     Nothing -> []
     Just identifier ->
-      categoryTasks identifier (appWorkspace app)
+      filterTasks (uiFilter (appUi app))
+        (categoryTasks identifier (appWorkspace app))
 
--- | Task under the cursor, or the task open on the details screen.
+-- | Applies the state filter to a list of tasks.
+filterTasks :: Filter -> [Task] -> [Task]
+filterTasks ShowAll = id
+filterTasks (OnlyStatus status) = tasksByStatus status
+
+-- | Human readable label of a filter.
+filterLabel :: Filter -> String
+filterLabel ShowAll = "all"
+filterLabel (OnlyStatus status) = statusLabel status
+
+-- | Advances the filter through all, Todo, Doing and Done.
+nextFilter :: Filter -> Filter
+nextFilter ShowAll = OnlyStatus Todo
+nextFilter (OnlyStatus Todo) = OnlyStatus Doing
+nextFilter (OnlyStatus Doing) = OnlyStatus Done
+nextFilter (OnlyStatus Done) = ShowAll
+
+-- | Task under the cursor, or the task open on the details or edit screen.
 selectedTaskId :: AppState -> Maybe TaskId
 selectedTaskId app =
   case uiScreen (appUi app) of
     DetailsScreen identifier -> Just identifier
+    EditTaskScreen identifier -> Just identifier
     _ ->
       taskId <$> indexMaybe (rowIndexValue (uiRow (appUi app)))
                          (visibleTasks app)

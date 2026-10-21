@@ -91,8 +91,10 @@ execute path state command =
     HelpCommand -> applyAction path state OpenHelp
     CategoriesCommand -> applyAction path state OpenCategories
     DetailsCommand -> applyAction path state OpenDetails
+    EditTaskCommand -> startEditTaskInput path state
     AddTaskCommand -> startTaskInput path state
     AddCategoryCommand -> startCategoryInput path state
+    CycleFilterCommand -> applyAction path state CycleFilter
     CycleCommand -> applyAction path state CycleSelected
     DeleteCommand -> applyAction path state DeleteSelected
     MoveRowCommand direction ->
@@ -144,6 +146,25 @@ selectCategoryByPosition path state position =
 
 -- Text input.
 --------------------------------------------------------------------------------
+
+startEditTaskInput :: FilePath -> LoopState -> IO Step
+startEditTaskInput path state =
+  case update OpenEditTask (loopApp state) of
+    Left domainError -> reportFailure state domainError
+    Right app ->
+      case uiScreen (appUi app) of
+        EditTaskScreen identifier -> do
+          let (formPage, prompts) = renderTaskForm defaultUiTheme app
+          (drawing, result) <- readForm formPage prompts (loopDraw state)
+          case result of
+            Left _ -> leaveInput app drawing
+            Right [rawTitle, rawContent] ->
+              applyAction path (LoopState app drawing)
+                (SubmitEdit identifier rawTitle rawContent)
+            Right _ -> leaveInput app drawing
+        _ -> do
+          drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
+          pure (Continue (LoopState app drawing))
 
 startTaskInput :: FilePath -> LoopState -> IO Step
 startTaskInput path state =
@@ -207,6 +228,7 @@ reportFailure state domainError = do
 errorScreen :: Screen -> Screen
 errorScreen AddTaskScreen = BoardScreen
 errorScreen AddCategoryScreen = CategoryScreen
+errorScreen (EditTaskScreen _) = BoardScreen
 errorScreen screen = screen
 
 escapeDelay :: Int
@@ -243,5 +265,14 @@ readArrow = do
     Just (Just 'B') -> pure (Just KeyDown)
     Just (Just 'C') -> pure (Just KeyRight)
     Just (Just 'D') -> pure (Just KeyLeft)
+    Just (Just '3') -> readDeleteTail
+    Just Nothing    -> pure Nothing
+    _               -> pure (Just KeyEscape)
+
+readDeleteTail :: IO (Maybe Key)
+readDeleteTail = do
+  next <- timeout escapeDelay readKey
+  case next of
+    Just (Just '~') -> pure (Just KeyDelete)
     Just Nothing    -> pure Nothing
     _               -> pure (Just KeyEscape)

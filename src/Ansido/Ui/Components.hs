@@ -14,6 +14,7 @@ module Ansido.Ui.Components
   , emptySection
   , keyHint
   , keyHintText
+  , truncateVisible
   ) where
 
 --------------------------------------------------------------------------------
@@ -111,3 +112,18 @@ keyHintText theme key label =
     [ (key, uiSelected theme)
     , (" " <> label, themeFooter (uiBase theme))
     ]
+
+-- | Truncates text to a visible width, appending an ellipsis when needed.
+truncateVisible :: Int -> String -> String
+truncateVisible limit text
+  | textWidth text <= limit = text
+  | limit <= 1              = takeVisible limit text
+  | otherwise               = takeVisible (limit - 1) text <> "…"
+
+takeVisible :: Int -> String -> String
+takeVisible limit = go 0
+  where
+    go _ [] = []
+    go used (char : rest)
+      | used + charWidth char > limit = []
+      | otherwise = char : go (used + charWidth char) rest

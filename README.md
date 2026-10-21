@@ -6,18 +6,20 @@ The name combines ANSI and "do", as in things to do.
 
 ## Goal
 
-`ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, groups, styles, immediate input, line input and redraw.
+`ansido` is a practical application of Ansiform. It exercises the library in a real program: pages, sections, tables, groups, styles, immediate input, forms, line input and redraw.
 
 ## Status
 
-Version 0.5.0 is functional. It includes:
+Version 0.6.0 is functional. It includes:
 
 - Task category creation and selection.
-- A single task table with title, note and state columns.
-- Vertical navigation with arrow keys or `j` and `k`.
+- A single task table with title, note and state columns, without borders.
+- Vertical navigation with arrow keys, `j` and `k`, or `w` and `s`.
+- A state filter that cycles through all, Todo, Doing and Done.
 - `Enter` to add a task and `Space` to cycle the selected task state.
+- `e` to edit the selected task from the board and `f` to edit from the details view.
 - `v` to view the full note with word wrap.
-- `Backspace` to go back and `d` to delete.
+- `Backspace` to go back and `Del` to delete.
 - A help page with the data file path.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
@@ -39,7 +41,7 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-The application opens on the category screen. Press `n` to create the first category and select it with its number. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its state, `v` to read the full note, `d` to delete it, `Backspace` to go back and `?` for the full key reference.
+The application opens on the category screen. Press `n` to create the first category and select it with its number. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its state, `f` to filter by state, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference.
 
 ## Documentation
 

@@ -23,6 +23,12 @@ import           Ansido.Ui.Components
 import           Ansido.Ui.Theme
 import           Ansido.Version (versionText)
 
+-- | A styled cell in a borderless table.
+data Cell = Cell
+  { cellText  :: String
+  , cellStyle :: Style
+  }
+
 -- | Renders the current state as a page.
 renderPage :: UiTheme -> AppState -> Page
 renderPage theme app =
@@ -31,12 +37,22 @@ renderPage theme app =
 -- | Renders a task form and returns the prompts read by 'readForm'.
 renderTaskForm :: UiTheme -> AppState -> (Page, [Prompt])
 renderTaskForm theme app =
-  ( page (before <> sections)
+  ( page (before <> hintSections <> sections)
   , prompts
   )
   where
     before = pageChrome theme app
-    titleIndex = length before
+    editMode =
+      case uiScreen (appUi app) of
+        EditTaskScreen _ -> True
+        _                -> False
+    hintSections =
+      if editMode
+        then [ section [ printerLeft 2
+                 (blockSimple "Empty input keeps the current value."
+                    (themeMuted (uiBase theme))) ] ]
+        else []
+    titleIndex = length before + length hintSections
     contentIndex = titleIndex + 1
     sections =
       [ promptLine theme taskTitlePrompt
@@ -93,6 +109,7 @@ screenBody theme app =
     BoardScreen -> boardBody theme app
     AddTaskScreen -> boardBody theme app
     DetailsScreen _ -> detailsBody theme app <> noticeSections theme app
+    EditTaskScreen _ -> detailsBody theme app <> noticeSections theme app
     HelpScreen -> helpBody theme app <> noticeSections theme app
     CategoryScreen -> categoriesBody theme app <> noticeSections theme app
     AddCategoryScreen -> categoriesBody theme app <> noticeSections theme app
@@ -119,52 +136,72 @@ boardBody theme app
           "Create a category first, press Backspace to open categories." ]
         <> noticeSections theme app
   | null (visibleTasks app) =
-      [ emptySection theme "No tasks yet, press Enter to add one." ]
-        <> noticeSections theme app
+      [ boardEmptySection theme app (emptyMessage (uiFilter (appUi app))) ]
   | otherwise =
       [ boardTableSection theme app ]
+
+emptyMessage :: Filter -> String
+emptyMessage ShowAll = "No tasks yet, press Enter to add one."
+emptyMessage (OnlyStatus status) = "No tasks in " <> statusLabel status <> "."
+
+boardWidths :: [Int]
+boardWidths = [20, 40, 7]
+
+boardAligns :: [Align]
+boardAligns = [AlignLeft, AlignLeft, AlignRight]
+
+boardHeader :: UiTheme -> [Cell]
+boardHeader theme =
+  [ Cell "Title" (themeTableHeader base)
+  , Cell "Note" (themeTableHeader base)
+  , Cell "State" (themeTableHeader base)
+  ]
+  where
+    base = uiBase theme
 
 boardTableSection :: UiTheme -> AppState -> Section
 boardTableSection theme app =
   sectionBody 1
-    ( [ printerTableBordered BordersLight boardTableFormat 1 1
-          (boardTable theme app) ]
+    ( [ filterPrinter theme app
+      , rowPrinter boardWidths boardAligns (boardHeader theme)
+      , printerEmpty 1
+      ] <> map (rowPrinter boardWidths boardAligns) (boardRows theme app)
         <> noticePrinters theme app
     )
 
--- | Title, note and state columns, with the note as the main field.
-boardTableFormat :: TableFormat
-boardTableFormat =
-  tableFormat
-    [ ColumnSpec AlignLeft (Just 20) (EllipsisChar '…')
-    , ColumnSpec AlignLeft (Just 40) (EllipsisChar '…')
-    , ColumnSpec AlignRight (Just 7) EllipsisNone
-    ]
-
-boardTable :: UiTheme -> AppState -> Maybe Table
-boardTable theme app =
-  tableBlocks
-    [ blockSimple "Title" headerStyle
-    , blockSimple "Note" headerStyle
-    , blockSimple "State" headerStyle
-    ]
-    (aboveRows <> taskRows <> belowRows)
+boardEmptySection :: UiTheme -> AppState -> String -> Section
+boardEmptySection theme app message =
+  sectionBody 1
+    ( [ filterPrinter theme app
+      , printerLeft 1 (blockSimple message (themeMuted base))
+      ] <> noticePrinters theme app
+    )
   where
     base = uiBase theme
-    headerStyle = themeTableHeader base
+
+filterPrinter :: UiTheme -> AppState -> Printer
+filterPrinter theme app =
+  printerLeft 1 (blockCycle
+    [ ("Filter: ", themeMuted (uiBase theme))
+    , (filterLabel (uiFilter (appUi app)), themeTableHeader (uiBase theme))
+    ])
+
+boardRows :: UiTheme -> AppState -> [[Cell]]
+boardRows theme app =
+  above <> map (taskCells theme selected) (windowItems win) <> below
+  where
     ui = appUi app
     tasks = visibleTasks app
     selected = selectedTaskId app
     win = windowAround boardWindowSize (rowIndexValue (uiRow ui)) tasks
-    taskRows = map (taskRow theme selected) (windowItems win)
-    aboveRows = if windowAbove win then [markerRow theme] else []
-    belowRows = if windowBelow win then [markerRow theme] else []
+    above = if windowAbove win then [markerCells theme] else []
+    below = if windowBelow win then [markerCells theme] else []
 
-taskRow :: UiTheme -> Maybe TaskId -> Task -> [Block]
-taskRow theme selected task =
-  [ blockSimple (marker <> taskTitleText (taskTitle task)) titleStyle
-  , blockSimple noteText noteStyle
-  , blockSimple (statusLabel (taskStatus task))
+taskCells :: UiTheme -> Maybe TaskId -> Task -> [Cell]
+taskCells theme selected task =
+  [ Cell (marker <> taskTitleText (taskTitle task)) titleStyle
+  , Cell noteText noteStyle
+  , Cell (statusLabel (taskStatus task))
       (statusStyle theme (taskStatus task))
   ]
   where
@@ -180,11 +217,11 @@ taskRow theme selected task =
       | null (taskContentText (taskContent task)) = themeMuted base
       | otherwise = themeTableBody base
 
-markerRow :: UiTheme -> [Block]
-markerRow theme =
-  [ blockSimple "..." (themeMuted (uiBase theme))
-  , blockEmpty
-  , blockEmpty
+markerCells :: UiTheme -> [Cell]
+markerCells theme =
+  [ Cell "..." (themeMuted (uiBase theme))
+  , Cell "" (themeTableBody (uiBase theme))
+  , Cell "" (themeTableBody (uiBase theme))
   ]
 
 -- Details.
@@ -242,18 +279,39 @@ categoryNameFor workspace identifier =
 -- Help.
 --------------------------------------------------------------------------------
 
+helpWidths :: [Int]
+helpWidths = [17, 32]
+
+helpAligns :: [Align]
+helpAligns = [AlignLeft, AlignLeft]
+
+helpHeader :: UiTheme -> [Cell]
+helpHeader theme =
+  [ Cell "Key" (themeTableHeader (uiBase theme))
+  , Cell "Action" (themeTableHeader (uiBase theme))
+  ]
+
+helpRows :: UiTheme -> [[Cell]]
+helpRows theme =
+  [ [ Cell key (uiSelected theme)
+    , Cell description (themeTableBody (uiBase theme))
+    ]
+  | (key, description) <- helpEntries
+  ]
+
 helpBody :: UiTheme -> AppState -> [Section]
 helpBody theme app =
   [ titleSection theme "Help"
   , sectionTop 1
-      [ printerTableBordered BordersLight defaultTableFormat 1 1
-          (helpTable theme)
-      , printerEmpty 1
-      , printerLeft 1
-          (blockSimple "Data file:" (themeTableHeader base))
-      , printerParagraph 3 0
-          [ blockSimple (dataFilePath app) (themeTableBody base) ]
-      ]
+      ( [ rowPrinter helpWidths helpAligns (helpHeader theme)
+        , printerEmpty 1
+        ] <> map (rowPrinter helpWidths helpAligns) (helpRows theme)
+          <> [ printerEmpty 1
+             , printerLeft 1
+                 (blockSimple "Data file:" (themeTableHeader base))
+             , printerParagraph 3 0
+                 [ blockSimple (dataFilePath app) (themeTableBody base) ]
+             ] )
   ]
   where
     base = uiBase theme
@@ -263,25 +321,17 @@ dataFilePath app
   | null (appDataFile app) = "(not set)"
   | otherwise = appDataFile app
 
-helpTable :: UiTheme -> Maybe Table
-helpTable theme =
-  tableBlocks
-    [ blockSimple "Key" (themeTableHeader (uiBase theme))
-    , blockSimple "Action" (themeTableHeader (uiBase theme))
-    ]
-    [ [ blockSimple key (uiSelected theme)
-      , blockSimple description (themeTableBody (uiBase theme))
-      ]
-    | (key, description) <- helpEntries
-    ]
-
 helpEntries :: [(String, String)]
 helpEntries =
   [ ("↑ / ↓", "select a task")
   , ("j / k", "vim alternative")
+  , ("w / s", "wasd alternative")
   , ("Enter", "add a task")
   , ("Space", "cycle the selected task state")
-  , ("d", "delete the selected task")
+  , ("e", "edit the selected task (board)")
+  , ("f (board)", "filter by state")
+  , ("f (details)", "edit the task")
+  , ("Del", "delete the selected task")
   , ("v", "view the full note")
   , ("Backspace / Esc", "go back one screen")
   , ("n", "create a category")
@@ -294,31 +344,29 @@ helpEntries =
 -- Categories.
 --------------------------------------------------------------------------------
 
-categoriesBody :: UiTheme -> AppState -> [Section]
-categoriesBody theme app =
-  [ sectionBody 1
-      [ printerTableBordered BordersLight defaultTableFormat 1 1
-          (categoryTable theme app)
-      , printerLeft 1
-          (blockSimple "Press n to create a category." (themeMuted base))
-      ]
+categoryWidths :: [Int]
+categoryWidths = [3, 20, 6]
+
+categoryAligns :: [Align]
+categoryAligns = [AlignRight, AlignLeft, AlignRight]
+
+categoryHeader :: UiTheme -> [Cell]
+categoryHeader theme =
+  [ Cell "#" (themeTableHeader base)
+  , Cell "Category" (themeTableHeader base)
+  , Cell "Tasks" (themeTableHeader base)
   ]
   where
     base = uiBase theme
 
-categoryTable :: UiTheme -> AppState -> Maybe Table
-categoryTable theme app =
-  tableBlocks
-    [ blockSimple "#" (themeTableHeader base)
-    , blockSimple "Category" (themeTableHeader base)
-    , blockSimple "Tasks" (themeTableHeader base)
+categoryRows :: UiTheme -> AppState -> [[Cell]]
+categoryRows theme app =
+  [ [ Cell (show position) (uiSelected theme)
+    , Cell (categoryNameText (categoryName category)) (nameStyle category)
+    , Cell (show (countFor category)) (themeTableBody base)
     ]
-    [ [ blockSimple (show position) (uiSelected theme)
-      , blockSimple (categoryNameText (categoryName category)) (nameStyle category)
-      , blockSimple (show (countFor category)) (themeTableBody base)
-      ]
-    | (position, category) <- indexedCategories
-    ]
+  | (position, category) <- indexedCategories
+  ]
   where
     base = uiBase theme
     workspace = appWorkspace app
@@ -331,6 +379,19 @@ categoryTable theme app =
     countFor category =
       length (categoryTasks (categoryId category) workspace)
 
+categoriesBody :: UiTheme -> AppState -> [Section]
+categoriesBody theme app =
+  [ sectionBody 1
+      ( [ rowPrinter categoryWidths categoryAligns (categoryHeader theme)
+        , printerEmpty 1
+        ] <> map (rowPrinter categoryWidths categoryAligns)
+                 (categoryRows theme app)
+          <> [ printerLeft 1
+                 (blockSimple "Press n to create a category."
+                    (themeMuted (uiBase theme)))
+             ] )
+  ]
+
 -- Footer.
 --------------------------------------------------------------------------------
 
@@ -338,21 +399,24 @@ footerHints :: UiTheme -> Screen -> [Block]
 footerHints theme screen =
   case screen of
     BoardScreen ->
-      [ keyHintText theme "↑↓" "select"
+      [ keyHintText theme "↑↓/ws" "select"
       , keyHintText theme "Enter" "add"
       , keyHintText theme "Space" "state"
-      , keyHint theme 'd' "del"
-      , keyHint theme 'v' "view"
+      , keyHint theme 'e' "edit"
+      , keyHint theme 'f' "filter"
+      , keyHintText theme "Del" "del"
       , keyHintText theme "⌫" "back"
-      , keyHint theme '?' "help"
       , keyHint theme 'x' "exit"
       ]
     DetailsScreen _ ->
       [ keyHintText theme "⌫" "back"
       , keyHintText theme "Space" "state"
-      , keyHint theme 'd' "del"
+      , keyHint theme 'f' "edit"
+      , keyHintText theme "Del" "del"
       , keyHint theme 'x' "exit"
       ]
+    EditTaskScreen _ ->
+      [ keyHintText theme "Enter" "confirm" ]
     HelpScreen ->
       [ keyHintText theme "⌫" "back"
       , keyHint theme 'x' "exit"
@@ -402,6 +466,38 @@ categoryPromptColumn = 2 + textWidth categoryPrompt
 promptLine :: UiTheme -> String -> Section
 promptLine theme label =
   section [ printerLeft 2 (blockSimple label (uiSelected theme)) ]
+
+-- Table rendering.
+--------------------------------------------------------------------------------
+
+rowPrinter :: [Int] -> [Align] -> [Cell] -> Printer
+rowPrinter widths aligns cells =
+  printerLeft 1 (renderRow widths aligns cells)
+
+renderRow :: [Int] -> [Align] -> [Cell] -> Block
+renderRow widths aligns cells =
+  block (go widths aligns cells)
+  where
+    go [] _ [] = []
+    go (columnWidth : restWidths) (align : restAligns) (cell : restCells) =
+      item (padCell columnWidth align (cellText cell)) (cellStyle cell)
+        : (if null restCells
+             then []
+             else item "  " styleDefault
+                    : go restWidths restAligns restCells)
+    go _ _ _ = []
+
+padCell :: Int -> Align -> String -> String
+padCell columnWidth align text =
+  let clipped = truncateVisible columnWidth text
+      gap = max 0 (columnWidth - textWidth clipped)
+  in case align of
+       AlignLeft -> clipped <> replicate gap ' '
+       AlignRight -> replicate gap ' ' <> clipped
+       AlignCenter ->
+         replicate (gap `div` 2) ' '
+           <> clipped
+           <> replicate (gap - gap `div` 2) ' '
 
 -- Utilities.
 --------------------------------------------------------------------------------

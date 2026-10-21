@@ -1,15 +1,16 @@
 # Interface
 
-The interface is built with Ansiform pages, sections, tables and immediate input.
+The interface is built with Ansiform pages, sections, borderless tables, forms and immediate input.
 
 ## Screens
 
 | Screen | Purpose |
 | --- | --- |
 | Categories | Category list with task counts and selection. This is always the initial screen. |
-| Board | Task table with title, note and state for the selected category. |
+| Board | Task table with title, note and state for the selected category, with a live state filter. |
 | Details | Full task view with the complete note wrapped across lines. |
-| Help | Key reference in a bordered table, followed by the data file path. |
+| Edit task | Task form with the current content above the prompts. |
+| Help | Key reference in a borderless table, followed by the data file path. |
 | Add task | Task table preview with title and note prompts at the bottom. |
 | Add category | Category preview with a name prompt at the bottom. |
 
@@ -23,9 +24,12 @@ Every screen shares the same header, category bar and footer. The header shows t
 | --- | --- |
 | `↑` / `↓` | Select the previous or next task. |
 | `j` / `k` | Vim-style alternative to the vertical arrow keys. |
+| `w` / `s` | WASD-style alternative to the vertical arrow keys. |
 | `Enter` | Open the new task prompt. |
 | `Space` | Cycle the selected task state forward. |
-| `d` | Delete the selected task. |
+| `e` | Edit the selected task. |
+| `f` | Cycle the state filter. |
+| `Del` | Delete the selected task. |
 | `v` | Open the full task view. |
 | `Backspace` or `Esc` | Go back to the category selection. |
 | `?` | Open help. |
@@ -36,7 +40,13 @@ The state cycle is `Todo -> Doing -> Done -> Todo`. The selected row stays in pl
 
 ### Details
 
-`Backspace` or `Esc` returns to the board, `Space` cycles the task state, `d` deletes the task, `?` opens help and `x` exits. The complete note is shown with word wrap.
+`Backspace` or `Esc` returns to the board, `Space` cycles the task state, `f` edits the task, `Del` deletes it, `?` opens help and `x` exits. The complete note is shown with word wrap.
+
+### Edit task
+
+The edit screen reuses the task form and shows the current title, state, category and note above the prompts. Type a new value or press `Enter` to keep the current one. An empty title and an empty note both keep their current values. The edit is submitted after the note prompt, and the board returns with a confirmation notice.
+
+Ansiform forms read lines rather than providing an editable pre-filled buffer. The current content is therefore shown above the prompts, and empty input means "keep current".
 
 ### Categories
 
@@ -48,13 +58,19 @@ The state cycle is `Todo -> Doing -> Done -> Todo`. The selected row stays in pl
 
 ### Back navigation
 
-The back key follows the screen hierarchy: details returns to the board, the board returns to the category selection, the category selection returns to the board and help returns to the board. `Backspace` is the primary back key, and `Esc` is an alternative.
+The back key follows the screen hierarchy: details and edit return to the board, the board returns to the category selection, the category selection returns to the board and help returns to the board. `Backspace` is the primary back key, and `Esc` is an alternative.
 
 ### Prompts
 
-The task prompt has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection.
+The create form has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the create prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection.
 
 Input is validated by the domain smart constructors, so an overlong title, an overlong note or a text with control characters becomes a notice instead of a broken record.
+
+## Filtering
+
+The `f` key cycles the board filter through `all`, `Todo`, `Doing` and `Done`, then back to `all`. A line above the table always shows the current filter, so changing the filter does not move the table.
+
+The filter applies to the task table and to the selected row. If the filter hides the selected task, the selection is clamped to the visible tasks. When a new task is created, the filter returns to `all` so the new task is visible. The category task counts remain totals and do not change with the filter.
 
 ## Layout
 
@@ -71,11 +87,11 @@ The page is composed of:
 9. A solid footer bar.
 10. One or two optional prompt lines.
 
-Notices are embedded immediately below the board table, with a blank line after the notice, so a state change or a task message does not move the table. The category screen has no title: after the rule and a blank line, the category table starts directly. The help table starts one line below the `Help` title, and a blank line separates it from the `Data file` label.
+The board and category tables have no borders. The help table is also borderless. The column alignment and truncation from the shared row renderer remain.
 
-The board is a single bordered table with three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green.
+The board table has three columns: title, note and state. The note is the main field and receives the widest column. The title is short and stays on the left. The state is a small right-aligned column with the values `Todo`, `Doing` and `Done`, each styled with its status color. Todo is red, Doing is cyan and Done is green. The filter line sits above the table header.
 
-The table format uses per-column maximum widths of 20 columns for the title, 40 for the note and 7 for the state, with an ellipsis when a title or note is truncated. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
+The shared row renderer uses per-column maximum widths of 20 columns for the title, 40 for the note and 7 for the state, with an ellipsis when a title or note is truncated. The selected row is marked with `> ` in the title column and uses the bold selection style for the title and note. The state keeps its status color.
 
 The details screen shows the title, state and category as compact fields, followed by the complete note in a paragraph. Paragraphs wrap to the terminal width, so long notes remain readable.
 
@@ -85,13 +101,13 @@ The task table shows at most ten tasks. The visible window follows the selection
 
 ## Text input
 
-The task and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables line input once for the whole form and returns the updated `Draw.State` with the typed values.
+The create, edit and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables line input once for the whole form and returns the updated `Draw.State` with the typed values.
 
-The task form has two prompts, title and note. The category form has one prompt. Empty task title input cancels the form, while an empty note is accepted.
+The task form has two prompts, title and note. The category form has one prompt. In edit mode, the form adds a hint line before the prompts saying that empty input keeps the current value, and the prompt indices account for that extra section.
 
 ## Key decoding
 
-Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action. Space is a normal character and is handled by the board and details screens.
+Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. The Delete key is decoded from the `Esc [ 3 ~` sequence. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action. Space is a normal character and is handled by the board and details screens.
 
 ## Theme
 
@@ -101,4 +117,4 @@ Muted text is white italic, used for labels, inactive category tabs, empty place
 
 ## Terminal behavior
 
-Colors are suppressed automatically when output is not a terminal, when `NO_COLOR` is set or when `TERM=dumb`. The task table is designed for an 80-column terminal: the three columns, padding and borders fit within 80 columns. Wider terminals simply receive more space around the header, footer and rules.
+Colors are suppressed automatically when output is not a terminal, when `NO_COLOR` is set or when `TERM=dumb`. The task table is designed for an 80-column terminal. Wider terminals simply receive more space around the header, footer and rules.

@@ -9,6 +9,8 @@ module Ansido.App.Update
   ) where
 
 --------------------------------------------------------------------------------
+import           Data.Char (isSpace)
+import           Data.List (findIndex)
 import           Data.Maybe (listToMaybe)
 
 import           Ansido.App.State
@@ -23,13 +25,17 @@ update action app =
     OpenHelp -> Right (setScreen HelpScreen app)
     OpenCategories -> Right (setScreen CategoryScreen app)
     OpenDetails -> openDetails app
+    OpenEditTask -> openEditTask app
     OpenAddTask -> openAddTask app
     OpenAddCategory -> Right (setScreen AddCategoryScreen app)
     SelectCategory identifier -> selectCategory identifier app
     MoveRow direction -> Right (moveRow direction app)
+    CycleFilter -> Right (cycleFilter app)
     CycleSelected -> cycleSelected app
     DeleteSelected -> deleteSelected app
     SubmitTask rawTitle rawContent -> submitTask rawTitle rawContent app
+    SubmitEdit identifier rawTitle rawContent ->
+      submitEdit identifier rawTitle rawContent app
     SubmitCategory rawName -> submitCategory rawName app
     SetNotice notice -> Right (withNotice notice app)
     ClearNotice -> Right (clearNotice app)
@@ -40,6 +46,7 @@ backAction screen =
   case screen of
     BoardScreen       -> OpenCategories
     DetailsScreen _   -> OpenBoard
+    EditTaskScreen _  -> OpenBoard
     CategoryScreen    -> OpenBoard
     HelpScreen        -> OpenBoard
     AddTaskScreen     -> OpenBoard
@@ -65,6 +72,14 @@ openDetails app =
     Nothing ->
       Right (withNotice (Notice NoticeInfo "No task selected.") app)
 
+openEditTask :: AppState -> Either DomainError AppState
+openEditTask app =
+  case selectedTask app of
+    Just task ->
+      Right (setScreen (EditTaskScreen (taskId task)) app)
+    Nothing ->
+      Right (withNotice (Notice NoticeInfo "No task selected.") app)
+
 openAddTask :: AppState -> Either DomainError AppState
 openAddTask app =
   case uiCategory (appUi app) of
@@ -87,6 +102,15 @@ selectCategory identifier app
 
 -- Selection.
 --------------------------------------------------------------------------------
+
+cycleFilter :: AppState -> AppState
+cycleFilter app =
+  clampAppState (app
+    { appUi = (appUi app)
+        { uiFilter = nextFilter (uiFilter (appUi app))
+        , uiNotice = Nothing
+        }
+    })
 
 moveRow :: Direction -> AppState -> AppState
 moveRow direction app =
@@ -130,6 +154,36 @@ deleteSelected app =
             }
         }))
 
+submitEdit :: TaskId -> String -> String -> AppState
+           -> Either DomainError AppState
+submitEdit identifier rawTitle rawContent app =
+  case findTask identifier (appWorkspace app) of
+    Nothing -> Left (UnknownTask identifier)
+    Just task -> do
+      title <- if all isSpace rawTitle
+        then Right (taskTitle task)
+        else mkTaskTitle rawTitle
+      content <- if all isSpace rawContent
+        then Right (taskContent task)
+        else mkTaskContent rawContent
+      workspace <- editTask identifier title content (appWorkspace app)
+      let categoryIdentifier = taskCategory task
+          tasks = filterTasks (uiFilter (appUi app))
+                    (categoryTasks categoryIdentifier workspace)
+          position = case findIndex ((== identifier) . taskId) tasks of
+            Just index -> index
+            Nothing -> 0
+          notice = Notice NoticeInfo "Task updated."
+      Right (clampAppState (app
+        { appWorkspace = workspace
+        , appUi = (appUi app)
+            { uiScreen = BoardScreen
+            , uiCategory = Just categoryIdentifier
+            , uiRow = RowIndex position
+            , uiNotice = Just notice
+            }
+        }))
+
 submitTask :: String -> String -> AppState -> Either DomainError AppState
 submitTask rawTitle rawContent app =
   case uiCategory (appUi app) of
@@ -150,6 +204,7 @@ submitTask rawTitle rawContent app =
         , appUi = (appUi app)
             { uiScreen = BoardScreen
             , uiCategory = Just identifier
+            , uiFilter = ShowAll
             , uiRow = RowIndex position
             , uiNotice = Just notice
             }
@@ -188,7 +243,8 @@ clampUiState workspace ui =
       tasks = case identifier of
         Nothing -> []
         Just categoryIdentifier ->
-          categoryTasks categoryIdentifier workspace
+          filterTasks (uiFilter ui)
+            (categoryTasks categoryIdentifier workspace)
       limit = max 0 (length tasks - 1)
       position = min (max 0 (rowIndexValue (uiRow ui))) limit
   in ui

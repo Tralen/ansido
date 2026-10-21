@@ -41,6 +41,7 @@ module Ansido.Domain
   , addTask
   , moveTask
   , advanceTask
+  , editTask
   , deleteTask
   ) where
 
@@ -279,6 +280,22 @@ advanceTask identifier workspace =
   case findTask identifier workspace of
     Nothing   -> Left (UnknownTask identifier)
     Just task -> moveTask identifier (nextStatus (taskStatus task)) workspace
+
+-- | Replaces the title and note of a task.
+editTask :: TaskId -> TaskTitle -> TaskContent -> Workspace
+         -> Either DomainError Workspace
+editTask identifier title content workspace =
+  case findTask identifier workspace of
+    Nothing -> Left (UnknownTask identifier)
+    Just _  ->
+      mkWorkspace
+        (workspaceCategories workspace)
+        (map update (workspaceTasks workspace))
+  where
+    update task
+      | taskId task == identifier =
+          task { taskTitle = title, taskContent = content }
+      | otherwise = task
 
 -- | Removes a task.
 deleteTask :: TaskId -> Workspace -> Either DomainError Workspace

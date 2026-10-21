@@ -58,7 +58,7 @@ The pure layers never throw. Domain failures use `DomainError`, persistence fail
 
 ## Reusable components
 
-The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are assembled from Ansiform tables rather than hand-formatted strings. `noticePrinter` returns a single notice line, so the board can embed the notice in the same section as the table and keep the spacing exact.
+The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are rendered by a shared borderless row builder using Ansiform items and blocks, with fixed column widths and truncation. `noticePrinter` returns a single notice line, so the board can embed the notice in the same section as the table and keep the spacing exact.
 
 ## Ansiform notes
 
@@ -72,9 +72,12 @@ The friction points found while building against 0.7.8.5 are resolved or clarifi
 - The `readLineAt` documentation now warns that it already wraps `withLineInput`.
 - `addNumber`, `subtractNumber` and `subtractNumberMaybe` make non-negative arithmetic explicit. The application does not subtract `Number` values, but checked subtraction is available when needed.
 - Tables still truncate cells instead of wrapping them. The details screen uses `printerParagraph` to show the full note with word wrap, which is the right primitive for long text.
+- The borderless table printer falls back to column bands for tall tables, which split the help columns in the terminal. The application therefore renders tables row by row with `item`, `block`, `textWidth` and `truncateVisible`, keeping the borderless layout predictable while still using Ansiform's text primitives.
 
 The feedback is positive overall: the library provided the groups, tables, rules, solid bars and forms needed without pulling in a larger TUI framework.
 
 ## Selection model
 
-`UiState` stores the selected screen, category and row; `AppState` also stores the data file path shown on the help screen. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the task list. The board renders a window of ten tasks, keeping the selected row visible and marking hidden rows with an ellipsis row. The details screen resolves the selected task from `DetailsScreen TaskId` instead of the row.
+`UiState` stores the selected screen, category, state filter and row; `AppState` also stores the data file path shown on the help screen. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the filtered task list. The board renders a window of ten tasks, keeping the selected row visible and marking hidden rows with an ellipsis row. The details and edit screens resolve the selected task from `DetailsScreen TaskId` and `EditTaskScreen TaskId` instead of the row.
+
+The filter is a `Filter` value with `ShowAll` and `OnlyStatus Status`. `visibleTasks` applies it, so the table, selection and clamping all use the same filtered list. Creating a task resets the filter to `ShowAll`; editing keeps the current filter.

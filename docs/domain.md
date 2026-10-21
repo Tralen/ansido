@@ -47,6 +47,7 @@ A broken invariant becomes `DuplicateCategoryId`, `DuplicateCategoryName`, `Dupl
 | `addTask category title content workspace` | The new `Task` and the new `Workspace`. New tasks start at `Todo`. |
 | `moveTask identifier status workspace` | A workspace with the task status replaced. |
 | `advanceTask identifier workspace` | A workspace with the task moved along the status cycle. |
+| `editTask identifier title content workspace` | A workspace with the task title and note replaced. |
 | `deleteTask identifier workspace` | A workspace without the task. |
 
 All transitions return `Either DomainError a`. None of them throw.

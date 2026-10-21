@@ -3,6 +3,16 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.6.0
+- Added the `f` state filter on the board, cycling through all, Todo, Doing and Done.
+- Added the `e` key to edit the selected task from the board and `f` to edit from the details view.
+- The edit form reuses the task form, shows the current content above the prompts and keeps the current value when the input is empty.
+- Removed the borders from the board, category and help tables.
+- Added W/S as a third vertical navigation alternative, alongside the arrow keys and Vim keys.
+- Moved task deletion to the `Del` key, including ANSI sequence decoding for the Delete key.
+- Added a live filter line above the task table.
+- Added tests for filtering, editing, the Delete key and W/S navigation.
+
 ### 0.5.0
 - Updated Ansiform to 0.7.9.0 and adopted `readForm` for the task and category forms.
 - Moved the help table one line up and added a blank line before the data file section.

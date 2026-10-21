@@ -11,7 +11,8 @@ import           Ansido.App.State
 import           Ansido.App.Update (backAction, update)
 import           Ansido.Domain
 import           Ansido.Persistence
-import           Ansido.Ui.Components (Notice (..), NoticeKind (..))
+import           Ansido.Ui.Components (Notice (..), NoticeKind (..),
+                                       truncateVisible)
 import           Ansido.Ui.Page (Window (..), renderTaskForm,
                                  taskContentPromptColumn, taskTitlePromptColumn,
                                  windowAround)
@@ -90,8 +91,12 @@ tests =
   , testWindowStart
   , testWindowMiddle
   , testWindowEnd
+  , testTruncate
   , testInitialState
   , testCycleStatus
+  , testFilter
+  , testEditTask
+  , testEditBlankKeeps
   , testMoveRow
   , testSubmitTask
   , testSubmitCategory
@@ -100,6 +105,8 @@ tests =
   , testOpenDetails
   , testTaskFormPrompts
   , testArrowKeys
+  , testDeleteKey
+  , testWsKeys
   , testBackActions
   ]
 
@@ -294,6 +301,14 @@ testWindowEnd =
   )
 
 
+testTruncate :: (String, Check)
+testTruncate =
+  ( "truncate visible"
+  , do
+      checkEqual "short" "short" (truncateVisible 10 "short")
+      checkEqual "long" "abcd…" (truncateVisible 5 "abcdefgh")
+  )
+
 testInitialState :: (String, Check)
 testInitialState =
   ( "initial state"
@@ -317,6 +332,69 @@ testCycleStatus =
       forward <- rightOr (update CycleSelected board)
       checkEqual "forward" (Just Doing)
         (taskStatus <$> findTask (TaskId 1) (appWorkspace forward))
+  )
+
+testFilter :: (String, Check)
+testFilter =
+  ( "state filter"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      board <- rightOr (update (SelectCategory (categoryId category))
+                                (initialAppState workspace))
+      down <- rightOr (update (MoveRow Next) board)
+      doing <- rightOr (update CycleSelected down)
+      checkEqual "all count" 2 (length (visibleTasks doing))
+      todo <- rightOr (update CycleFilter doing)
+      checkEqual "todo filter label" "Todo"
+        (filterLabel (uiFilter (appUi todo)))
+      checkEqual "todo count" 1 (length (visibleTasks todo))
+      checkEqual "todo status" [Todo] (map taskStatus (visibleTasks todo))
+      doingFiltered <- rightOr (update CycleFilter todo)
+      checkEqual "doing filter label" "Doing"
+        (filterLabel (uiFilter (appUi doingFiltered)))
+      checkEqual "doing count" 1 (length (visibleTasks doingFiltered))
+      done <- rightOr (update CycleFilter doingFiltered)
+      checkEqual "done count" 0 (length (visibleTasks done))
+      allAgain <- rightOr (update CycleFilter done)
+      checkEqual "all again" ShowAll (uiFilter (appUi allAgain))
+      checkEqual "all count again" 2 (length (visibleTasks allAgain))
+  )
+
+testEditTask :: (String, Check)
+testEditTask =
+  ( "edit task"
+  , do
+      workspace <- fixtureWorkspace
+      title <- rightOr (mkTaskTitle "Edited title")
+      content <- rightOr (mkTaskContent "Edited note")
+      updated <- rightOr (editTask (TaskId 1) title content workspace)
+      checkEqual "title" (Just "Edited title")
+        (taskTitleText . taskTitle <$> findTask (TaskId 1) updated)
+      checkEqual "content" (Just "Edited note")
+        (taskContentText . taskContent <$> findTask (TaskId 1) updated)
+      check "unknown task"
+        (isLeft (editTask (TaskId 99) title content workspace))
+  )
+
+testEditBlankKeeps :: (String, Check)
+testEditBlankKeeps =
+  ( "edit blank keeps the current value"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      board <- rightOr (update (SelectCategory (categoryId category))
+                                (initialAppState workspace))
+      kept <- rightOr (update (SubmitEdit (TaskId 1) "" "") board)
+      checkEqual "title kept" (Just "Write docs")
+        (taskTitleText . taskTitle <$> findTask (TaskId 1) (appWorkspace kept))
+      checkEqual "content kept" (Just "First note")
+        (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace kept))
+      changed <- rightOr (update (SubmitEdit (TaskId 1) "New" "New note") board)
+      checkEqual "title changed" (Just "New")
+        (taskTitleText . taskTitle <$> findTask (TaskId 1) (appWorkspace changed))
+      checkEqual "content changed" (Just "New note")
+        (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace changed))
   )
 
 testMoveRow :: (String, Check)
@@ -446,7 +524,33 @@ testBackActions =
       checkEqual "board back" OpenCategories (backAction BoardScreen)
       checkEqual "details back" OpenBoard
         (backAction (DetailsScreen (TaskId 1)))
+      checkEqual "edit back" OpenBoard
+        (backAction (EditTaskScreen (TaskId 1)))
       checkEqual "category back" OpenBoard (backAction CategoryScreen)
+  )
+
+testDeleteKey :: (String, Check)
+testDeleteKey =
+  ( "delete key"
+  , do
+      checkEqual "board delete" (Just DeleteCommand)
+        (commandForKey BoardScreen KeyDelete)
+      checkEqual "details delete" (Just DeleteCommand)
+        (commandForKey (DetailsScreen (TaskId 1)) KeyDelete)
+      checkEqual "d is not delete" Nothing
+        (commandForKey BoardScreen (KeyCharacter 'd'))
+      checkEqual "delete on help" Nothing
+        (commandForKey HelpScreen KeyDelete)
+  )
+
+testWsKeys :: (String, Check)
+testWsKeys =
+  ( "ws navigation"
+  , do
+      checkEqual "w" (Just (MoveRowCommand Previous))
+        (commandForKey BoardScreen (KeyCharacter 'w'))
+      checkEqual "s" (Just (MoveRowCommand Next))
+        (commandForKey BoardScreen (KeyCharacter 's'))
   )
 
 -- Main.

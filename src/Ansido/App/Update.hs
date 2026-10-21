@@ -136,7 +136,9 @@ submitTask :: String -> AppState -> Either DomainError AppState
 submitTask rawTitle app =
   case uiCategory (appUi app) of
     Nothing ->
-      Right (withNotice (Notice NoticeError "Create a category first.") app)
+      Right (withNotice
+        (Notice NoticeError "Create a category first.")
+        (setScreen BoardScreen app))
     Just identifier -> do
       title <- mkTaskTitle rawTitle
       (task, workspace) <- addTask identifier title (appWorkspace app)

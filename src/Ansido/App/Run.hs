@@ -108,9 +108,11 @@ applyAction :: FilePath -> LoopState -> Action -> IO Step
 applyAction path state action =
   case update action (loopApp state) of
     Left domainError -> do
-      let app = withNotice
+      let base = loopApp state
+          app = withNotice
             (Notice NoticeError (domainErrorMessage domainError))
-            (loopApp state)
+            (base { appUi = (appUi base)
+              { uiScreen = errorScreen (uiScreen (appUi base)) } })
       drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
       pure (Continue (LoopState app drawing))
     Right app -> do
@@ -181,8 +183,15 @@ leaveInput app drawing =
 
 reportFailure :: LoopState -> DomainError -> IO Step
 reportFailure state domainError = do
-  let app = withNotice
+  let base = loopApp state
+      app = withNotice
         (Notice NoticeError (domainErrorMessage domainError))
-        (loopApp state)
+        (base { appUi = (appUi base)
+          { uiScreen = errorScreen (uiScreen (appUi base)) } })
   drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
   pure (Continue (LoopState app drawing))
+
+errorScreen :: Screen -> Screen
+errorScreen AddTaskScreen = BoardScreen
+errorScreen AddCategoryScreen = CategoryScreen
+errorScreen screen = screen

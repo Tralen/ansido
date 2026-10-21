@@ -74,6 +74,8 @@ The friction points found while building against 0.7.8.5 are resolved or clarifi
 - Tables still truncate cells instead of wrapping them. The details screen uses `printerParagraph` to show the full note with word wrap, which is the right primitive for long text.
 - The borderless table printer falls back to column bands for tall tables, which split the help columns in the terminal. The application therefore renders tables row by row with `item`, `block`, `textWidth` and `truncateVisible`, keeping the borderless layout predictable while still using Ansiform's text primitives.
 
+The proposed API for editable form fields with initial values is documented in [Ansiform form defaults](ansiform-form-defaults.md).
+
 The feedback is positive overall: the library provided the groups, tables, rules, solid bars and forms needed without pulling in a larger TUI framework.
 
 ## Selection model

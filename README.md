@@ -10,7 +10,7 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.6.2 is functional. It includes:
+Version 0.6.3 is functional. It includes:
 
 - Task category creation and selection.
 - A single task table with title, note and state columns, without borders.
@@ -50,6 +50,7 @@ The application opens on the category screen. Press `n` to create the first cate
 - [Persistence](docs/persistence.md): file format, validation and atomic saving.
 - [Interface](docs/interface.md): screens, keys, layout, theming and input.
 - [Development](docs/development.md): build, tests, versioning and contribution rules.
+- [Ansiform form defaults](docs/ansiform-form-defaults.md): API proposal for editable pre-filled form fields.
 
 ## Design principles
 

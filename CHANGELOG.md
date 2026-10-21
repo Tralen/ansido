@@ -65,6 +65,9 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.6.3
+- Added `docs/ansiform-form-defaults.md`, a design proposal for editable pre-filled form fields in Ansiform, including the current limitation, proposed `Prompt` API, line editor, compatibility and test plan.
+
 ### 0.6.2
 - Removed the bracketed current value from the edit prompts; the current content remains above and empty input keeps the current value.
 - Styled the `Categories:` label in the category bar with the bold yellow table-header style.

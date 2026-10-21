@@ -58,7 +58,7 @@ The pure layers never throw. Domain failures use `DomainError`, persistence fail
 
 ## Reusable components
 
-The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are rendered with `printerTableBordered BordersNone` from Ansiform. The cells are padded to fixed widths before the table printer sees them, so alignment and truncation stay the same without a custom row renderer. `noticePrinter` returns a single notice line, so the board can embed the notice in the same section as the table and keep the spacing exact.
+The header, footer, category bar, notices, key hints and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The task table, help table and category table are rendered with `printerTableBordered BordersNone` from Ansiform. The cells are padded to fixed widths before the table printer sees them, so alignment and truncation stay the same without a custom row renderer. `noticePrinter` returns a single notice line, so the board and category screens embed the notice in the same section as their table and keep the spacing exact.
 
 ## Ansiform notes
 

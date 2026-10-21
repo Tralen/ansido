@@ -81,6 +81,10 @@
 ## Revision History
 *Patches, bug fixes, and minor updates.*
 
+### 0.8.1
+- Moved the category notice directly below the category table, with a blank line before the footer, matching the board layout.
+- Changed the README documentation and license links to absolute GitHub URLs so they also work on Hackage.
+
 ### 0.6.4
 - Replaced the custom borderless row renderer with `printerTableBordered BordersNone` from Ansiform 0.7.10.3.
 - The board, help and category tables keep their fixed widths, truncation and styles without column bands.

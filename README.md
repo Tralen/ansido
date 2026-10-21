@@ -10,7 +10,7 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.8.0 is functional. It includes:
+Version 0.8.1 is functional. It includes:
 
 - Task category creation, selection, editing and deletion.
 - Arrow, `j`/`k` and `w`/`s` navigation on the category screen, with `Enter` opening the board.
@@ -46,12 +46,12 @@ The application opens on the category screen. Press `n` to create the first cate
 
 ## Documentation
 
-- [Architecture](docs/architecture.md): layers, module responsibilities and the pure/IO boundary.
-- [Domain](docs/domain.md): entities, invariants, transitions and errors.
-- [Persistence](docs/persistence.md): file format, validation and atomic saving.
-- [Interface](docs/interface.md): screens, keys, layout, theming and input.
-- [Development](docs/development.md): build, tests, versioning and contribution rules.
-- [Ansiform form defaults](docs/ansiform-form-defaults.md): API proposal for editable pre-filled form fields.
+- [Architecture](https://github.com/Tralen/ansido/blob/main/docs/architecture.md): layers, module responsibilities and the pure/IO boundary.
+- [Domain](https://github.com/Tralen/ansido/blob/main/docs/domain.md): entities, invariants, transitions and errors.
+- [Persistence](https://github.com/Tralen/ansido/blob/main/docs/persistence.md): file format, validation and atomic saving.
+- [Interface](https://github.com/Tralen/ansido/blob/main/docs/interface.md): screens, keys, layout, theming and input.
+- [Development](https://github.com/Tralen/ansido/blob/main/docs/development.md): build, tests, versioning and contribution rules.
+- [Ansiform form defaults](https://github.com/Tralen/ansido/blob/main/docs/ansiform-form-defaults.md): API proposal for editable pre-filled form fields.
 
 ## Design principles
 
@@ -63,4 +63,4 @@ The application opens on the category screen. Press `n` to create the first cate
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/Tralen/ansido/blob/main/LICENSE).

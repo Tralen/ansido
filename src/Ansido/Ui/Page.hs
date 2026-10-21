@@ -118,8 +118,8 @@ screenBody theme app =
     DetailsScreen _ -> detailsBody theme app <> noticeSections theme app
     EditTaskScreen _ -> detailsBody theme app <> noticeSections theme app
     HelpScreen -> helpBody theme app <> noticeSections theme app
-    CategoryScreen -> categoriesBody theme app <> noticeSections theme app
-    AddCategoryScreen -> categoriesBody theme app <> noticeSections theme app
+    CategoryScreen -> categoriesBody theme app
+    AddCategoryScreen -> categoriesBody theme app
     EditCategoryScreen _ ->
       categoryDetailsBody theme app <> noticeSections theme app
 
@@ -396,7 +396,8 @@ categoryRows theme app =
 
 categoriesBody :: UiTheme -> AppState -> [Section]
 categoriesBody theme app =
-  [ sectionBody 1 (tablePrinter : hintPrinters) ]
+  [ sectionBody 1
+      (tablePrinter : (hintPrinters <> noticePrinters theme app)) ]
   where
     base = uiBase theme
     tablePrinter =

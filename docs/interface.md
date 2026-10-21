@@ -57,6 +57,8 @@ Ansiform forms read complete lines, so the current value is shown above the prom
 
 The hint `Press n to create a category.` is shown below the category table only while there are no categories. The category footer lists the arrow keys, `Enter open`, `n new`, `e edit`, `Del del`, the back icon and `x exit`.
 
+The category notice sits directly below the table, or below the creation hint when the workspace is empty, and a blank line separates it from the footer. This matches the board notice position.
+
 Moving the highlight resets the task row so the next board opens on its first task. The category bar and the table row highlight the same category.
 
 ### Edit category
@@ -94,7 +96,7 @@ The page is composed of:
 5. The category bar.
 6. A full-width rule below the category bar.
 7. The screen body.
-8. An optional notice below the body.
+8. An optional notice directly below the body, followed by a blank line before the footer.
 9. A solid footer bar.
 10. One or two optional prompt lines.
 

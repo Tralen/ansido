@@ -150,10 +150,15 @@ startTaskInput :: FilePath -> LoopState -> IO Step
 startTaskInput path state =
   case update OpenAddTask (loopApp state) of
     Left domainError -> reportFailure state domainError
-    Right app -> do
-      drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
-      input <- readLineAt 1 (formNumber taskPromptColumn)
-      continueWithInput path app drawing SubmitTask input
+    Right app ->
+      case uiScreen (appUi app) of
+        AddTaskScreen -> do
+          drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
+          input <- readLineAt 1 (formNumber taskPromptColumn)
+          continueWithInput path app drawing SubmitTask input
+        _ -> do
+          drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
+          pure (Continue (LoopState app drawing))
 
 startCategoryInput :: FilePath -> LoopState -> IO Step
 startCategoryInput path state =
@@ -175,11 +180,15 @@ continueWithInput path app drawing toAction input =
 
 leaveInput :: AppState -> Draw.State -> IO Step
 leaveInput app drawing =
-  case update OpenBoard app of
+  case update (cancelAction (uiScreen (appUi app))) app of
     Left domainError -> reportFailure (LoopState app drawing) domainError
     Right app' -> do
       drawing' <- Draw.draw (renderPage defaultUiTheme app') drawing
       pure (Continue (LoopState app' drawing'))
+
+cancelAction :: Screen -> Action
+cancelAction AddCategoryScreen = OpenCategories
+cancelAction _ = OpenBoard
 
 reportFailure :: LoopState -> DomainError -> IO Step
 reportFailure state domainError = do

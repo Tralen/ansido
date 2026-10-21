@@ -187,13 +187,14 @@ defaultDataFile = do
 -- | Loads the data file, treating a missing file as an empty workspace.
 loadWorkspace :: FilePath -> IO (Either PersistenceError Workspace)
 loadWorkspace path = do
-  exists <- doesFileExist path
-  if not exists
-    then pure (Right emptyWorkspace)
-    else do
+  existsResult <- tryIO (doesFileExist path)
+  case existsResult of
+    Left exception -> pure (Left (ReadFailed path (show exception)))
+    Right False    -> pure (Right emptyWorkspace)
+    Right True     -> do
       result <- tryIO (readFile path)
       pure $ case result of
-        Left exception     -> Left (ReadFailed path (show exception))
+        Left exception    -> Left (ReadFailed path (show exception))
         Right fileContent -> decodeWorkspace fileContent
 
 -- | Saves the data file atomically through a temporary sibling file.

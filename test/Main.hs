@@ -13,7 +13,8 @@ import           Ansido.Domain
 import           Ansido.Persistence
 import           Ansido.Ui.Components (Notice (..), NoticeKind (..),
                                        truncateVisible)
-import           Ansido.Ui.Page (Window (..), renderTaskForm,
+import           Ansido.Ui.Page (Window (..), categoryPromptColumn,
+                                 renderCategoryForm, renderTaskForm,
                                  taskContentPromptColumn, taskTitlePromptColumn,
                                  windowAround)
 import           Ansido.Ui.Theme (defaultUiTheme)
@@ -81,6 +82,10 @@ tests =
   , testMoveTask
   , testAdvanceTaskCycle
   , testDeleteTask
+  , testEditCategory
+  , testDeleteCategory
+  , testSubmitCategoryEdit
+  , testDeleteSelectedCategory
   , testDuplicateCategory
   , testWorkspaceInvariants
   , testEncodeDecode
@@ -104,10 +109,12 @@ tests =
   , testAddTaskWithoutCategory
   , testOpenDetails
   , testTaskFormPrompts
+  , testCategoryFormPrompts
   , testArrowKeys
   , testDeleteKey
   , testWsKeys
   , testBackActions
+  , testCategoryKeys
   ]
 
 testTaskTitleValidation :: (String, Check)
@@ -203,6 +210,88 @@ testDeleteTask =
       updated <- rightOr (deleteTask (TaskId 1) workspace)
       checkEqual "task removed" Nothing (findTask (TaskId 1) updated)
       checkEqual "other task kept" (Just (TaskId 2)) (taskId <$> findTask (TaskId 2) updated)
+  )
+
+testEditCategory :: (String, Check)
+testEditCategory =
+  ( "edit category"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      name <- rightOr (mkCategoryName "Personal")
+      updated <- rightOr (editCategory (categoryId category) name workspace)
+      checkEqual "name" (Just "Personal")
+        (categoryNameText . categoryName
+          <$> findCategory (categoryId category) updated)
+      unchanged <- rightOr (editCategory (categoryId category)
+                             (categoryName category) workspace)
+      checkEqual "same name kept" (workspaceCategories workspace)
+        (workspaceCategories unchanged)
+      (_, twoCategories) <- rightOr (addCategory name workspace)
+      check "duplicate name accepted"
+        (isLeft (editCategory (categoryId category) name twoCategories))
+      check "unknown category"
+        (isLeft (editCategory (CategoryId 99) name workspace))
+  )
+
+testDeleteCategory :: (String, Check)
+testDeleteCategory =
+  ( "delete category"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      otherName <- rightOr (mkCategoryName "Personal")
+      (other, twoCategories) <- rightOr (addCategory otherName workspace)
+      title <- rightOr (mkTaskTitle "Kept task")
+      content <- rightOr (mkTaskContent "Kept note")
+      (keptTask, withOtherTask) <-
+        rightOr (addTask (categoryId other) title content twoCategories)
+      updated <- rightOr (deleteCategory (categoryId category) withOtherTask)
+      checkEqual "category removed" Nothing
+        (findCategory (categoryId category) updated)
+      checkEqual "own tasks removed"
+        [taskId keptTask]
+        (map taskId (workspaceTasks updated))
+      check "unknown category"
+        (isLeft (deleteCategory (CategoryId 99) withOtherTask))
+  )
+
+testSubmitCategoryEdit :: (String, Check)
+testSubmitCategoryEdit =
+  ( "submit category edit"
+  , do
+      category <- fixtureCategory
+      workspace <- fixtureWorkspace
+      renamed <- rightOr (update (SubmitCategoryEdit (categoryId category) "Office")
+                                  (initialAppState workspace))
+      checkEqual "renamed" (Just "Office")
+        (categoryNameText . categoryName
+          <$> findCategory (categoryId category) (appWorkspace renamed))
+      checkEqual "category screen" CategoryScreen (uiScreen (appUi renamed))
+      checkEqual "selection kept" (Just (categoryId category))
+        (uiCategory (appUi renamed))
+      kept <- rightOr (update (SubmitCategoryEdit (categoryId category) "   ")
+                               (initialAppState workspace))
+      checkEqual "blank keeps name" (Just "Work")
+        (categoryNameText . categoryName
+          <$> findCategory (categoryId category) (appWorkspace kept))
+  )
+
+testDeleteSelectedCategory :: (String, Check)
+testDeleteSelectedCategory =
+  ( "delete selected category"
+  , do
+      workspace <- fixtureWorkspace
+      app <- rightOr (update DeleteSelectedCategory
+                            (initialAppState workspace))
+      checkEqual "categories removed" [] (workspaceCategories (appWorkspace app))
+      checkEqual "tasks removed" [] (workspaceTasks (appWorkspace app))
+      checkEqual "category screen" CategoryScreen (uiScreen (appUi app))
+      checkEqual "selection cleared" Nothing (uiCategory (appUi app))
+      case uiNotice (appUi app) of
+        Just notice ->
+          checkEqual "info notice" NoticeInfo (noticeKind notice)
+        Nothing -> Left "no notice"
   )
 
 testDuplicateCategory :: (String, Check)
@@ -493,6 +582,28 @@ testTaskFormPrompts =
         _ -> Left "unexpected prompt count"
   )
 
+testCategoryFormPrompts :: (String, Check)
+testCategoryFormPrompts =
+  ( "category form prompts"
+  , do
+      workspace <- fixtureWorkspace
+      let app = initialAppState workspace
+      addApp <- rightOr (update OpenAddCategory app)
+      editApp <- rightOr (update OpenEditCategory app)
+      case ( snd (renderCategoryForm defaultUiTheme addApp)
+           , snd (renderCategoryForm defaultUiTheme editApp) ) of
+        ([addPrompt], [editPrompt]) -> do
+          checkEqual "row" 0 (promptRow addPrompt)
+          checkEqual "column" (formNumber categoryPromptColumn)
+            (promptColumn addPrompt)
+          checkEqual "edit row" 0 (promptRow editPrompt)
+          checkEqual "edit column" (formNumber categoryPromptColumn)
+            (promptColumn editPrompt)
+          checkEqual "edit prompt below the hint"
+            (promptSection addPrompt + 1) (promptSection editPrompt)
+        _ -> Left "unexpected prompt count"
+  )
+
 testArrowKeys :: (String, Check)
 testArrowKeys =
   ( "arrow keys"
@@ -535,6 +646,8 @@ testBackActions =
       checkEqual "edit back" OpenBoard
         (backAction (EditTaskScreen (TaskId 1)))
       checkEqual "category back" OpenBoard (backAction CategoryScreen)
+      checkEqual "edit category back" OpenCategories
+        (backAction (EditCategoryScreen (CategoryId 1)))
   )
 
 testDeleteKey :: (String, Check)
@@ -559,6 +672,24 @@ testWsKeys =
         (commandForKey BoardScreen (KeyCharacter 'w'))
       checkEqual "s" (Just (MoveRowCommand Next))
         (commandForKey BoardScreen (KeyCharacter 's'))
+  )
+
+testCategoryKeys :: (String, Check)
+testCategoryKeys =
+  ( "category keys"
+  , do
+      checkEqual "n creates" (Just AddCategoryCommand)
+        (commandForKey CategoryScreen (KeyCharacter 'n'))
+      checkEqual "e edits" (Just EditCategoryCommand)
+        (commandForKey CategoryScreen (KeyCharacter 'e'))
+      checkEqual "delete removes a category" (Just DeleteCategoryCommand)
+        (commandForKey CategoryScreen KeyDelete)
+      checkEqual "digits select" (Just (SelectCategoryCommand 2))
+        (commandForKey CategoryScreen (KeyCharacter '2'))
+      checkEqual "edit form ignores e" Nothing
+        (commandForKey (EditCategoryScreen (CategoryId 1)) (KeyCharacter 'e'))
+      checkEqual "edit form confirms with enter" Nothing
+        (commandForKey (EditCategoryScreen (CategoryId 1)) KeyEnter)
   )
 
 -- Main.

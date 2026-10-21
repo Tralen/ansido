@@ -37,6 +37,8 @@ data Command
   | EditTaskCommand
   | AddTaskCommand
   | AddCategoryCommand
+  | EditCategoryCommand
+  | DeleteCategoryCommand
   | CycleFilterCommand
   | CycleCommand
   | DeleteCommand
@@ -68,6 +70,7 @@ deleteCommand screen =
   case screen of
     BoardScreen      -> Just DeleteCommand
     DetailsScreen _  -> Just DeleteCommand
+    CategoryScreen   -> Just DeleteCategoryCommand
     _                -> Nothing
 
 characterCommand :: Screen -> Char -> Maybe Command
@@ -79,13 +82,14 @@ characterCommand screen key =
     'R' -> Just RedrawCommand
     _ ->
       case screen of
-        BoardScreen      -> boardCommand (toLower key)
-        DetailsScreen _  -> detailsCommand (toLower key)
-        EditTaskScreen _ -> Nothing
-        HelpScreen       -> helpCommand (toLower key)
-        CategoryScreen   -> categoryCommand key
-        AddTaskScreen    -> Nothing
-        AddCategoryScreen -> Nothing
+        BoardScreen          -> boardCommand (toLower key)
+        DetailsScreen _      -> detailsCommand (toLower key)
+        EditTaskScreen _     -> Nothing
+        HelpScreen           -> helpCommand (toLower key)
+        CategoryScreen       -> categoryCommand key
+        AddTaskScreen        -> Nothing
+        AddCategoryScreen    -> Nothing
+        EditCategoryScreen _ -> Nothing
 
 boardCommand :: Char -> Maybe Command
 boardCommand key =
@@ -122,5 +126,6 @@ categoryCommand key
   | otherwise =
       case toLower key of
         'n' -> Just AddCategoryCommand
+        'e' -> Just EditCategoryCommand
         '?' -> Just HelpCommand
         _   -> Nothing

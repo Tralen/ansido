@@ -28,15 +28,19 @@ update action app =
     OpenEditTask -> openEditTask app
     OpenAddTask -> openAddTask app
     OpenAddCategory -> Right (setScreen AddCategoryScreen app)
+    OpenEditCategory -> openEditCategory app
     SelectCategory identifier -> selectCategory identifier app
     MoveRow direction -> Right (moveRow direction app)
     CycleFilter -> Right (cycleFilter app)
     CycleSelected -> cycleSelected app
     DeleteSelected -> deleteSelected app
+    DeleteSelectedCategory -> deleteSelectedCategory app
     SubmitTask rawTitle rawContent -> submitTask rawTitle rawContent app
     SubmitEdit identifier rawTitle rawContent ->
       submitEdit identifier rawTitle rawContent app
     SubmitCategory rawName -> submitCategory rawName app
+    SubmitCategoryEdit identifier rawName ->
+      submitCategoryEdit identifier rawName app
     SetNotice notice -> Right (withNotice notice app)
     ClearNotice -> Right (clearNotice app)
 
@@ -44,13 +48,14 @@ update action app =
 backAction :: Screen -> Action
 backAction screen =
   case screen of
-    BoardScreen       -> OpenCategories
-    DetailsScreen _   -> OpenBoard
-    EditTaskScreen _  -> OpenBoard
-    CategoryScreen    -> OpenBoard
-    HelpScreen        -> OpenBoard
-    AddTaskScreen     -> OpenBoard
-    AddCategoryScreen -> OpenCategories
+    BoardScreen          -> OpenCategories
+    DetailsScreen _      -> OpenBoard
+    EditTaskScreen _     -> OpenBoard
+    CategoryScreen       -> OpenBoard
+    HelpScreen           -> OpenBoard
+    AddTaskScreen        -> OpenBoard
+    AddCategoryScreen    -> OpenCategories
+    EditCategoryScreen _ -> OpenCategories
 
 -- Screens.
 --------------------------------------------------------------------------------
@@ -86,6 +91,14 @@ openAddTask app =
     Just _ -> Right (setScreen AddTaskScreen app)
     Nothing ->
       Right (withNotice (Notice NoticeError "Create a category first.") app)
+
+openEditCategory :: AppState -> Either DomainError AppState
+openEditCategory app =
+  case currentCategory app of
+    Just category ->
+      Right (setScreen (EditCategoryScreen (categoryId category)) app)
+    Nothing ->
+      Right (withNotice (Notice NoticeInfo "No category selected.") app)
 
 selectCategory :: CategoryId -> AppState -> Either DomainError AppState
 selectCategory identifier app
@@ -133,7 +146,7 @@ cycleSelected app =
       let next = nextStatus (taskStatus task)
       workspace <- moveTask (taskId task) next (appWorkspace app)
       let notice = Notice NoticeInfo
-            ("State changed to " <> statusLabel next <> ".")
+            ("Status changed to " <> statusLabel next <> ".")
       Right (clampAppState (app
         { appWorkspace = workspace
         , appUi = (appUi app) { uiNotice = Just notice }
@@ -228,6 +241,51 @@ submitCategory rawName app = do
         , uiNotice = Just notice
         }
     })
+
+submitCategoryEdit :: CategoryId -> String -> AppState
+                  -> Either DomainError AppState
+submitCategoryEdit identifier rawName app =
+  case findCategory identifier (appWorkspace app) of
+    Nothing -> Left (UnknownCategory identifier)
+    Just category -> do
+      name <- if all isSpace rawName
+        then Right (categoryName category)
+        else mkCategoryName rawName
+      workspace <- editCategory identifier name (appWorkspace app)
+      let notice = Notice NoticeInfo
+            ("Category updated: " <> categoryNameText name)
+      Right (clampAppState (app
+        { appWorkspace = workspace
+        , appUi = (appUi app)
+            { uiScreen = CategoryScreen
+            , uiCategory = Just identifier
+            , uiRow = RowIndex 0
+            , uiNotice = Just notice
+            }
+        }))
+
+deleteSelectedCategory :: AppState -> Either DomainError AppState
+deleteSelectedCategory app =
+  case currentCategory app of
+    Nothing ->
+      Right (withNotice (Notice NoticeInfo "No category selected.") app)
+    Just category -> do
+      let identifier = categoryId category
+          removed = length (categoryTasks identifier (appWorkspace app))
+          suffix = case removed of
+            0 -> ""
+            1 -> " with 1 task"
+            count -> " with " <> show count <> " tasks"
+          notice = Notice NoticeInfo ("Category deleted" <> suffix <> ".")
+      workspace <- deleteCategory identifier (appWorkspace app)
+      Right (clampAppState (app
+        { appWorkspace = workspace
+        , appUi = (appUi app)
+            { uiScreen = CategoryScreen
+            , uiRow = RowIndex 0
+            , uiNotice = Just notice
+            }
+        }))
 
 -- Clamping.
 --------------------------------------------------------------------------------

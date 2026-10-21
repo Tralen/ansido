@@ -38,6 +38,8 @@ module Ansido.Domain
   , indexMaybe
     -- * Transitions.
   , addCategory
+  , editCategory
+  , deleteCategory
   , addTask
   , moveTask
   , advanceTask
@@ -241,6 +243,35 @@ addCategory name workspace
           (workspaceCategories workspace <> [category])
           (workspaceTasks workspace)
         Right (category, updated)
+
+-- | Renames a category.
+--
+-- The new name must not belong to another category.
+editCategory :: CategoryId -> CategoryName -> Workspace
+             -> Either DomainError Workspace
+editCategory identifier name workspace
+  | not (any ((== identifier) . categoryId) categories) =
+      Left (UnknownCategory identifier)
+  | any sameNameOther categories =
+      Left (CategoryAlreadyExists name)
+  | otherwise =
+      mkWorkspace (map rename categories) (workspaceTasks workspace)
+  where
+    categories = workspaceCategories workspace
+    sameNameOther category =
+      categoryId category /= identifier && categoryName category == name
+    rename category
+      | categoryId category == identifier = category { categoryName = name }
+      | otherwise = category
+
+-- | Removes a category together with every task it owns.
+deleteCategory :: CategoryId -> Workspace -> Either DomainError Workspace
+deleteCategory identifier workspace
+  | any ((== identifier) . categoryId) (workspaceCategories workspace) =
+      mkWorkspace
+        (filter ((/= identifier) . categoryId) (workspaceCategories workspace))
+        (filter ((/= identifier) . taskCategory) (workspaceTasks workspace))
+  | otherwise = Left (UnknownCategory identifier)
 
 -- | Adds a task to a category, always starting at 'Todo'.
 addTask :: CategoryId -> TaskTitle -> TaskContent -> Workspace

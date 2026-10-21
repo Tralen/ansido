@@ -94,6 +94,8 @@ execute path state command =
     EditTaskCommand -> startEditTaskInput path state
     AddTaskCommand -> startTaskInput path state
     AddCategoryCommand -> startCategoryInput path state
+    EditCategoryCommand -> startEditCategoryInput path state
+    DeleteCategoryCommand -> applyAction path state DeleteSelectedCategory
     CycleFilterCommand -> applyAction path state CycleFilter
     CycleCommand -> applyAction path state CycleSelected
     DeleteCommand -> applyAction path state DeleteSelected
@@ -203,6 +205,25 @@ startCategoryInput path state =
                 (SubmitCategory rawName)
         Right _ -> leaveInput app drawing
 
+startEditCategoryInput :: FilePath -> LoopState -> IO Step
+startEditCategoryInput path state =
+  case update OpenEditCategory (loopApp state) of
+    Left domainError -> reportFailure state domainError
+    Right app ->
+      case uiScreen (appUi app) of
+        EditCategoryScreen identifier -> do
+          let (formPage, prompts) = renderCategoryForm defaultUiTheme app
+          (drawing, result) <- readForm formPage prompts (loopDraw state)
+          case result of
+            Left _ -> leaveInput app drawing
+            Right [rawName] ->
+              applyAction path (LoopState app drawing)
+                (SubmitCategoryEdit identifier rawName)
+            Right _ -> leaveInput app drawing
+        _ -> do
+          drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
+          pure (Continue (LoopState app drawing))
+
 leaveInput :: AppState -> Draw.State -> IO Step
 leaveInput app drawing =
   case update (cancelAction (uiScreen (appUi app))) app of
@@ -213,6 +234,7 @@ leaveInput app drawing =
 
 cancelAction :: Screen -> Action
 cancelAction AddCategoryScreen = OpenCategories
+cancelAction (EditCategoryScreen _) = OpenCategories
 cancelAction _ = OpenBoard
 
 reportFailure :: LoopState -> DomainError -> IO Step
@@ -229,6 +251,7 @@ errorScreen :: Screen -> Screen
 errorScreen AddTaskScreen = BoardScreen
 errorScreen AddCategoryScreen = CategoryScreen
 errorScreen (EditTaskScreen _) = BoardScreen
+errorScreen (EditCategoryScreen _) = CategoryScreen
 errorScreen screen = screen
 
 escapeDelay :: Int

@@ -35,6 +35,7 @@ data Screen
   | CategoryScreen
   | AddTaskScreen
   | AddCategoryScreen
+  | EditCategoryScreen CategoryId
   deriving (Eq, Show)
 
 -- | Zero based position inside the task table.
@@ -74,14 +75,17 @@ data Action
   | OpenEditTask
   | OpenAddTask
   | OpenAddCategory
+  | OpenEditCategory
   | SelectCategory CategoryId
   | MoveRow Direction
   | CycleFilter
   | CycleSelected
   | DeleteSelected
+  | DeleteSelectedCategory
   | SubmitTask String String
   | SubmitEdit TaskId String String
   | SubmitCategory String
+  | SubmitCategoryEdit CategoryId String
   | SetNotice Notice
   | ClearNotice
   deriving (Eq, Show)

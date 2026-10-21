@@ -3,6 +3,14 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.7.0
+- Added category editing with the `e` key on the category screen; the form reuses the category prompt and keeps the current name when the input is empty.
+- Added category deletion with the `Del` key; deleting a category also removes its tasks, and the notice reports how many tasks were removed.
+- Removed the W/S hints from the board footer, leaving the arrow keys, and restored the `? help` hint.
+- Changed the user-facing term `State` to `Status` in the board header, details fields, footer, notices and help.
+- The `Press n to create a category.` hint is now shown only while there are no categories.
+- Added tests for category editing, cascade deletion, category keys and the category form prompt positions.
+
 ### 0.6.0
 - Added the `f` state filter on the board, cycling through all, Todo, Doing and Done.
 - Added the `e` key to edit the selected task from the board and `f` to edit from the details view.

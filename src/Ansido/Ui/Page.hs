@@ -65,12 +65,22 @@ renderTaskForm theme app =
 -- | Renders a category form and returns the prompt read by 'readForm'.
 renderCategoryForm :: UiTheme -> AppState -> (Page, [Prompt])
 renderCategoryForm theme app =
-  ( page (before <> sections)
+  ( page (before <> hintSections <> sections)
   , prompts
   )
   where
     before = pageChrome theme app
-    promptIndex = length before
+    editMode =
+      case uiScreen (appUi app) of
+        EditCategoryScreen _ -> True
+        _                    -> False
+    hintSections =
+      if editMode
+        then [ section [ printerLeft 2
+                 (blockSimple "Empty input keeps the current value."
+                    (themeMuted (uiBase theme))) ] ]
+        else []
+    promptIndex = length before + length hintSections
     sections = [ promptLine theme categoryPrompt ]
     prompts =
       [ promptAt (formNumber promptIndex) 0
@@ -110,6 +120,8 @@ screenBody theme app =
     HelpScreen -> helpBody theme app <> noticeSections theme app
     CategoryScreen -> categoriesBody theme app <> noticeSections theme app
     AddCategoryScreen -> categoriesBody theme app <> noticeSections theme app
+    EditCategoryScreen _ ->
+      categoryDetailsBody theme app <> noticeSections theme app
 
 noticeSections :: UiTheme -> AppState -> [Section]
 noticeSections theme app =
@@ -151,7 +163,7 @@ boardHeader :: UiTheme -> [Cell]
 boardHeader theme =
   [ Cell "Title" (themeTableHeader base)
   , Cell "Note" (themeTableHeader base)
-  , Cell "State" (themeTableHeader base)
+  , Cell "Status" (themeTableHeader base)
   ]
   where
     base = uiBase theme
@@ -243,7 +255,7 @@ detailsBody theme app =
           [ printerLeft 1 (fieldBlock theme "Title"
               (taskTitleText (taskTitle task))
               (uiSelected theme))
-          , printerLeft 1 (fieldBlock theme "State"
+          , printerLeft 1 (fieldBlock theme "Status"
               (statusLabel (taskStatus task))
               (statusStyle theme (taskStatus task)))
           , printerLeft 1 (fieldBlock theme "Category"
@@ -331,10 +343,10 @@ helpEntries =
   , ("j / k", "vim alternative")
   , ("w / s", "wasd alternative")
   , ("Enter", "add a task")
-  , ("Space", "cycle the selected task state")
-  , ("e", "edit the selected task")
-  , ("f (board)", "filter by state")
-  , ("Del", "delete the selected task")
+  , ("Space", "cycle the selected task status")
+  , ("e", "edit the selected task or category")
+  , ("f (board)", "filter by status")
+  , ("Del", "delete the selected task or category")
   , ("v", "view the full note")
   , ("Backspace / Esc", "go back one screen")
   , ("n", "create a category")
@@ -384,16 +396,41 @@ categoryRows theme app =
 
 categoriesBody :: UiTheme -> AppState -> [Section]
 categoriesBody theme app =
-  [ sectionBody 1
-      ( [ rowTablePrinter categoryWidths categoryAligns
-            (categoryHeader theme)
-            (blankRow categoryWidths (themeTableBody (uiBase theme))
-              : categoryRows theme app)
-        , printerLeft 1
-            (blockSimple "Press n to create a category."
-               (themeMuted (uiBase theme)))
-        ] )
-  ]
+  [ sectionBody 1 (tablePrinter : hintPrinters) ]
+  where
+    base = uiBase theme
+    tablePrinter =
+      rowTablePrinter categoryWidths categoryAligns
+        (categoryHeader theme)
+        (blankRow categoryWidths (themeTableBody base)
+          : categoryRows theme app)
+    hintPrinters =
+      if null (workspaceCategories (appWorkspace app))
+        then [ printerLeft 1
+                 (blockSimple "Press n to create a category."
+                    (themeMuted base)) ]
+        else []
+
+-- | Compact summary of the category that is being edited.
+categoryDetailsBody :: UiTheme -> AppState -> [Section]
+categoryDetailsBody theme app =
+  case currentCategory app of
+    Nothing ->
+      [ emptySection theme
+          "No category selected. Press Backspace to return to categories." ]
+    Just category ->
+      [ sectionBody 1
+          [ printerLeft 1 (fieldBlock theme "Name"
+              (categoryNameText (categoryName category))
+              (uiSelected theme))
+          , printerLeft 1 (fieldBlock theme "Tasks"
+              (show (length (categoryTasks (categoryId category)
+                                          (appWorkspace app))))
+              (themeTableBody base))
+          ]
+      ]
+  where
+    base = uiBase theme
 
 -- Footer.
 --------------------------------------------------------------------------------
@@ -402,23 +439,26 @@ footerHints :: UiTheme -> Screen -> [Block]
 footerHints theme screen =
   case screen of
     BoardScreen ->
-      [ keyHintText theme "↑↓/ws" "select"
+      [ blockSimple "↑↓" (uiSelected theme)
       , keyHintText theme "Enter" "add"
-      , keyHintText theme "Space" "state"
+      , keyHintText theme "Space" "status"
       , keyHint theme 'e' "edit"
       , keyHint theme 'f' "filter"
       , keyHintText theme "Del" "del"
+      , keyHintText theme "?" "help"
       , keyHintText theme "⌫" "back"
       , keyHint theme 'x' "exit"
       ]
     DetailsScreen _ ->
       [ keyHintText theme "⌫" "back"
-      , keyHintText theme "Space" "state"
+      , keyHintText theme "Space" "status"
       , keyHint theme 'e' "edit"
       , keyHintText theme "Del" "del"
       , keyHint theme 'x' "exit"
       ]
     EditTaskScreen _ ->
+      [ keyHintText theme "Enter" "confirm" ]
+    EditCategoryScreen _ ->
       [ keyHintText theme "Enter" "confirm" ]
     HelpScreen ->
       [ keyHintText theme "⌫" "back"
@@ -427,6 +467,8 @@ footerHints theme screen =
     CategoryScreen ->
       [ keyHint theme 'n' "new"
       , keyHintText theme "1-9" "select"
+      , keyHint theme 'e' "edit"
+      , keyHintText theme "Del" "del"
       , keyHintText theme "⌫" "back"
       , keyHint theme 'x' "exit"
       ]

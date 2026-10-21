@@ -16,7 +16,7 @@ The domain module defines the vocabulary of the application and the only legal t
 | `Status` | `Todo`, `Doing` or `Done`. |
 | `Workspace` | Ordered categories and ordered tasks. |
 
-`Workspace` hides its constructor. Values are built by `mkWorkspace`, `emptyWorkspace`, `addCategory`, `addTask`, `moveTask`, `advanceTask` and `deleteTask`.
+`Workspace` hides its constructor. Values are built by `mkWorkspace`, `emptyWorkspace`, `addCategory`, `editCategory`, `deleteCategory`, `addTask`, `moveTask`, `advanceTask`, `editTask` and `deleteTask`.
 
 ## Validation
 
@@ -44,13 +44,15 @@ A broken invariant becomes `DuplicateCategoryId`, `DuplicateCategoryName`, `Dupl
 | Function | Result |
 | --- | --- |
 | `addCategory name workspace` | The new `Category` and the new `Workspace`. |
+| `editCategory identifier name workspace` | A workspace with the category renamed. The new name must not belong to another category. |
+| `deleteCategory identifier workspace` | A workspace without the category and without every task it owned. |
 | `addTask category title content workspace` | The new `Task` and the new `Workspace`. New tasks start at `Todo`. |
 | `moveTask identifier status workspace` | A workspace with the task status replaced. |
 | `advanceTask identifier workspace` | A workspace with the task moved along the status cycle. |
 | `editTask identifier title content workspace` | A workspace with the task title and note replaced. |
 | `deleteTask identifier workspace` | A workspace without the task. |
 
-All transitions return `Either DomainError a`. None of them throw.
+All transitions return `Either DomainError a`. None of them throw. Deleting a category is a cascade: its tasks have no other owner, so they are removed with it. The application reports how many tasks were removed in the notice shown after the deletion.
 
 ## Identifiers
 

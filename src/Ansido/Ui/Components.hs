@@ -33,12 +33,13 @@ data Notice = Notice
   , noticeText :: String
   } deriving (Eq, Show)
 
--- | Application header with a solid title bar and a subtitle.
+-- | Application header with a solid title bar, a blank line and a subtitle.
 headerSection :: UiTheme -> String -> String -> Section
 headerSection theme title subtitle =
-  sectionTopRule 1 (rule '=' (themeRule base))
+  section
     [ printerSolidLineCenter 0 1 (themeBar base)
         [ blockSimple title (themeHeader base) ]
+    , printerEmpty 1
     , printerLineCenter 0 [ blockSimple subtitle (themeSubtitle base) ]
     ]
   where
@@ -62,10 +63,10 @@ titleSection theme label =
 categorySection :: UiTheme -> Maybe CategoryId -> [Category] -> Section
 categorySection theme active categories =
   case categories of
-    [] -> sectionTop 1
+    [] -> section
       [ printerLeft 1
           (blockSimple "No categories yet, press c to create one." (themeMuted base)) ]
-    _  -> sectionTop 1
+    _  -> section
       [ printerLineLeft 1
           (blockSimple "Categories:" (themeMuted base) : map categoryBlock categories) ]
   where

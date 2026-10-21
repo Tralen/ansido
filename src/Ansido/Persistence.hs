@@ -55,7 +55,14 @@ persistenceErrorMessage err =
 --------------------------------------------------------------------------------
 
 formatHeader :: String
-formatHeader = "ansido\t1"
+formatHeader = headerFor 2
+
+headerFor :: Int -> String
+headerFor version = "ansido\t" <> show version
+
+headerVersion :: String -> Maybe Int
+headerVersion header =
+  lookup header [ (headerFor 1, 1), (headerFor 2, 2) ]
 
 -- | Renders a workspace into the plain text format.
 encodeWorkspace :: Workspace -> String
@@ -82,6 +89,7 @@ encodeTask task =
     , show (categoryIdValue (taskCategory task))
     , statusKey (taskStatus task)
     , taskTitleText (taskTitle task)
+    , taskContentText (taskContent task)
     ]
 
 joinTabs :: [String] -> String
@@ -95,35 +103,48 @@ decodeWorkspace :: String -> Either PersistenceError Workspace
 decodeWorkspace raw =
   case lines raw of
     [] -> Right emptyWorkspace
-    (header : body)
-      | header /= formatHeader -> Left (UnsupportedHeader header)
-      | otherwise -> do
-          entries <- traverse decodeAt (zip [2 ..] body)
-          let records = catMaybes entries
-              categories = [category | Left category <- records]
-              tasks = [task | Right task <- records]
-          case mkWorkspace categories tasks of
-            Left domainError -> Left (InvalidWorkspace domainError)
-            Right workspace  -> Right workspace
+    (header : body) ->
+      case headerVersion header of
+        Nothing -> Left (UnsupportedHeader header)
+        Just version -> decodeEntries version body
+
+decodeEntries :: Int -> [String] -> Either PersistenceError Workspace
+decodeEntries version body = do
+  entries <- traverse decodeAt (zip [2 ..] body)
+  let records = catMaybes entries
+      categories = [category | Left category <- records]
+      tasks = [task | Right task <- records]
+  case mkWorkspace categories tasks of
+    Left domainError -> Left (InvalidWorkspace domainError)
+    Right workspace  -> Right workspace
   where
     decodeAt (lineNumber, line)
       | null line = Right Nothing
-      | otherwise = Just <$> decodeLine lineNumber line
+      | otherwise = Just <$> decodeLine version lineNumber line
 
-decodeLine :: Int -> String -> Either PersistenceError (Either Category Task)
-decodeLine lineNumber line =
-  case splitTabs line of
-    ["category", idText, nameText] -> do
+decodeLine :: Int -> Int -> String
+           -> Either PersistenceError (Either Category Task)
+decodeLine version lineNumber line =
+  case (version, splitTabs line) of
+    (_, ["category", idText, nameText]) -> do
       identifier <- parseCategoryId lineNumber idText
       name <- parseCategoryName lineNumber nameText
       Right (Left (Category identifier name))
-    ["task", idText, categoryText, statusText, titleText] -> do
-      identifier <- parseTaskId lineNumber idText
-      categoryIdentifier <- parseCategoryId lineNumber categoryText
-      status <- parseStatus lineNumber statusText
-      title <- parseTaskTitle lineNumber titleText
-      Right (Right (Task identifier title status categoryIdentifier))
+    (1, ["task", idText, categoryText, statusText, titleText]) ->
+      decodeTask lineNumber idText categoryText statusText titleText ""
+    (2, ["task", idText, categoryText, statusText, titleText, contentText]) ->
+      decodeTask lineNumber idText categoryText statusText titleText contentText
     _ -> Left (MalformedLine lineNumber "Expected a category or task record.")
+
+decodeTask :: Int -> String -> String -> String -> String -> String
+           -> Either PersistenceError (Either Category Task)
+decodeTask lineNumber idText categoryText statusText titleText contentText = do
+  identifier <- parseTaskId lineNumber idText
+  categoryIdentifier <- parseCategoryId lineNumber categoryText
+  status <- parseStatus lineNumber statusText
+  title <- parseTaskTitle lineNumber titleText
+  content <- parseTaskContent lineNumber contentText
+  Right (Right (Task identifier title content status categoryIdentifier))
 
 splitTabs :: String -> [String]
 splitTabs value =
@@ -154,6 +175,12 @@ parseTaskTitle lineNumber text =
   case mkTaskTitle text of
     Left domainError -> Left (MalformedLine lineNumber (domainErrorMessage domainError))
     Right title      -> Right title
+
+parseTaskContent :: Int -> String -> Either PersistenceError TaskContent
+parseTaskContent lineNumber text =
+  case mkTaskContent text of
+    Left domainError -> Left (MalformedLine lineNumber (domainErrorMessage domainError))
+    Right content    -> Right content
 
 parseStatus :: Int -> String -> Either PersistenceError Status
 parseStatus lineNumber text =

@@ -11,6 +11,7 @@ module Ansido.App.Run
 import           Data.Char (isSpace)
 import           System.Exit (exitFailure)
 import           System.IO (hPutStrLn, stderr)
+import           System.Timeout (timeout)
 
 import           Ansiform hiding (State, renderPage)
 import qualified Ansiform.Draw as Draw
@@ -65,11 +66,11 @@ data Step
 
 loop :: FilePath -> LoopState -> IO ()
 loop path state = do
-  key <- readKey
+  key <- readKeyEvent
   case key of
     Nothing -> pure ()
-    Just char ->
-      case commandForKey (uiScreen (appUi (loopApp state))) char of
+    Just event ->
+      case commandForKey (uiScreen (appUi (loopApp state))) event of
         Nothing -> loop path state
         Just command -> do
           step <- execute path state command
@@ -84,7 +85,9 @@ execute path state command =
     RedrawCommand -> do
       drawing <- Draw.redraw (loopDraw state)
       pure (Continue state { loopDraw = drawing })
-    BackCommand -> applyAction path state OpenBoard
+    BackCommand ->
+      applyAction path state
+        (backAction (uiScreen (appUi (loopApp state))))
     HelpCommand -> applyAction path state OpenHelp
     CategoriesCommand -> applyAction path state OpenCategories
     DetailsCommand -> applyAction path state OpenDetails
@@ -154,11 +157,24 @@ startTaskInput path state =
       case uiScreen (appUi app) of
         AddTaskScreen -> do
           drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
-          input <- readLineAt 1 (formNumber taskPromptColumn)
-          continueWithInput path app drawing SubmitTask input
+          titleInput <- readLineAt 2 (formNumber taskTitlePromptColumn)
+          case titleInput of
+            Nothing -> leaveInput app drawing
+            Just rawTitle
+              | all isSpace rawTitle -> leaveInput app drawing
+              | otherwise -> askContent path app drawing rawTitle
         _ -> do
           drawing <- Draw.draw (renderPage defaultUiTheme app) (loopDraw state)
           pure (Continue (LoopState app drawing))
+
+askContent :: FilePath -> AppState -> Draw.State -> String -> IO Step
+askContent path app drawing rawTitle = do
+  contentInput <- readLineAt 0 (formNumber taskContentPromptColumn)
+  case contentInput of
+    Nothing -> leaveInput app drawing
+    Just rawContent ->
+      applyAction path (LoopState app drawing)
+        (SubmitTask rawTitle rawContent)
 
 startCategoryInput :: FilePath -> LoopState -> IO Step
 startCategoryInput path state =
@@ -204,3 +220,36 @@ errorScreen :: Screen -> Screen
 errorScreen AddTaskScreen = BoardScreen
 errorScreen AddCategoryScreen = CategoryScreen
 errorScreen screen = screen
+
+escapeDelay :: Int
+escapeDelay = 30000
+
+-- | Reads a key and decodes ANSI arrow sequences into 'Key' values.
+readKeyEvent :: IO (Maybe Key)
+readKeyEvent = do
+  key <- readKey
+  case key of
+    Nothing -> pure Nothing
+    Just '\ESC' -> readEscape
+    Just char -> pure (Just (KeyCharacter char))
+
+readEscape :: IO (Maybe Key)
+readEscape = do
+  next <- timeout escapeDelay readKey
+  case next of
+    Nothing -> pure (Just KeyEscape)
+    Just Nothing -> pure Nothing
+    Just (Just '[') -> readArrow
+    Just (Just 'O') -> readArrow
+    Just (Just _) -> pure (Just KeyEscape)
+
+readArrow :: IO (Maybe Key)
+readArrow = do
+  next <- timeout escapeDelay readKey
+  case next of
+    Just (Just 'A') -> pure (Just KeyUp)
+    Just (Just 'B') -> pure (Just KeyDown)
+    Just (Just 'C') -> pure (Just KeyRight)
+    Just (Just 'D') -> pure (Just KeyLeft)
+    Just Nothing    -> pure Nothing
+    _               -> pure (Just KeyEscape)

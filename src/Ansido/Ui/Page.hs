@@ -4,8 +4,10 @@ module Ansido.Ui.Page
   , boardWindowSize
   , Window (..)
   , windowAround
-  , taskPrompt
-  , taskPromptColumn
+  , taskTitlePrompt
+  , taskTitlePromptColumn
+  , taskContentPrompt
+  , taskContentPromptColumn
   , categoryPrompt
   , categoryPromptColumn
   ) where
@@ -30,11 +32,15 @@ renderPage theme app =
           ("Terminal task manager, v" <> versionText)
       , categorySection theme (uiCategory ui)
           (workspaceCategories (appWorkspace app))
+      , sectionRule (rule '=' (themeRule (uiBase theme)))
       ]
     footer = footerSection theme (footerHints theme (uiScreen ui))
     promptSections =
       case uiScreen ui of
-        AddTaskScreen     -> [promptLine theme taskPrompt]
+        AddTaskScreen     ->
+          [ promptLine theme taskTitlePrompt
+          , promptLine theme taskContentPrompt
+          ]
         AddCategoryScreen -> [promptLine theme categoryPrompt]
         _                 -> []
 
@@ -148,10 +154,23 @@ detailsBody theme app =
           , printerLeft 1 (fieldBlock theme "Category"
               (categoryNameFor (appWorkspace app) (taskCategory task))
               (themeAccent base))
+          , printerLeft 1 (blockSimple "Note:" (themeMuted base))
+          , printerParagraph 3 0
+              [ blockSimple (taskNoteText task) (taskNoteStyle theme task) ]
           ]
       ]
   where
     base = uiBase theme
+
+taskNoteText :: Task -> String
+taskNoteText task
+  | null (taskContentText (taskContent task)) = "(empty)"
+  | otherwise = taskContentText (taskContent task)
+
+taskNoteStyle :: UiTheme -> Task -> Style
+taskNoteStyle theme task
+  | null (taskContentText (taskContent task)) = themeMuted (uiBase theme)
+  | otherwise = themeTableBody (uiBase theme)
 
 fieldBlock :: UiTheme -> String -> String -> Style -> Block
 fieldBlock theme label value style =
@@ -192,8 +211,9 @@ helpTable theme =
 
 helpEntries :: [(String, String)]
 helpEntries =
-  [ ("h / l", "move between columns")
-  , ("j / k", "move inside a column")
+  [ ("↑ / ↓", "move inside a column")
+  , ("← / →", "move between columns")
+  , ("h / j / k / l", "vim alternative")
   , ("1 / 2 / 3", "focus a column")
   , ("a", "add a task")
   , ("m", "advance the selected task")
@@ -202,7 +222,7 @@ helpEntries =
   , ("c", "open categories")
   , ("n", "create a category")
   , ("1 .. 9", "select a category")
-  , ("b / Esc", "go back")
+  , ("b / Esc", "go back one screen")
   , ("r", "redraw the screen")
   , ("?", "open this help")
   , ("x", "exit")
@@ -256,11 +276,13 @@ footerHints :: UiTheme -> Screen -> [Block]
 footerHints theme screen =
   case screen of
     BoardScreen ->
-      [ keyHint theme 'a' "add"
+      [ keyHintText theme "↑↓" "rows"
+      , keyHintText theme "←→" "cols"
+      , keyHint theme 'a' "add"
       , keyHint theme 'm' "move"
       , keyHint theme 'd' "del"
       , keyHint theme 'v' "view"
-      , keyHint theme 'c' "cats"
+      , keyHint theme 'b' "back"
       , keyHint theme '?' "help"
       , keyHint theme 'x' "exit"
       ]
@@ -293,12 +315,20 @@ footerHints theme screen =
 --------------------------------------------------------------------------------
 
 -- | Prompt printed for a new task title.
-taskPrompt :: String
-taskPrompt = "Task title: "
+taskTitlePrompt :: String
+taskTitlePrompt = "Task title: "
 
 -- | Column where the task title input starts.
-taskPromptColumn :: Int
-taskPromptColumn = 2 + textWidth taskPrompt
+taskTitlePromptColumn :: Int
+taskTitlePromptColumn = 2 + textWidth taskTitlePrompt
+
+-- | Prompt printed for a new task note.
+taskContentPrompt :: String
+taskContentPrompt = "Task note:  "
+
+-- | Column where the task note input starts.
+taskContentPromptColumn :: Int
+taskContentPromptColumn = 2 + textWidth taskContentPrompt
 
 -- | Prompt printed for a new category name.
 categoryPrompt :: String

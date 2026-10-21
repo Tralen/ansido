@@ -4,6 +4,7 @@
 -- 'DomainError', which the runner turns into a notice on screen.
 module Ansido.App.Update
   ( update
+  , backAction
   , clampAppState
   ) where
 
@@ -30,10 +31,21 @@ update action app =
     MoveRow direction -> Right (moveRow direction app)
     AdvanceSelected -> advanceSelected app
     DeleteSelected -> deleteSelected app
-    SubmitTask rawTitle -> submitTask rawTitle app
+    SubmitTask rawTitle rawContent -> submitTask rawTitle rawContent app
     SubmitCategory rawName -> submitCategory rawName app
     SetNotice notice -> Right (withNotice notice app)
     ClearNotice -> Right (clearNotice app)
+
+-- | The action performed by the back key on each screen.
+backAction :: Screen -> Action
+backAction screen =
+  case screen of
+    BoardScreen       -> OpenCategories
+    CategoryScreen    -> OpenBoard
+    DetailsScreen _   -> OpenBoard
+    HelpScreen        -> OpenBoard
+    AddTaskScreen     -> OpenBoard
+    AddCategoryScreen -> OpenCategories
 
 -- Screens.
 --------------------------------------------------------------------------------
@@ -132,8 +144,8 @@ deleteSelected app =
             }
         }))
 
-submitTask :: String -> AppState -> Either DomainError AppState
-submitTask rawTitle app =
+submitTask :: String -> String -> AppState -> Either DomainError AppState
+submitTask rawTitle rawContent app =
   case uiCategory (appUi app) of
     Nothing ->
       Right (withNotice
@@ -141,7 +153,8 @@ submitTask rawTitle app =
         (setScreen BoardScreen app))
     Just identifier -> do
       title <- mkTaskTitle rawTitle
-      (task, workspace) <- addTask identifier title (appWorkspace app)
+      content <- mkTaskContent rawContent
+      (task, workspace) <- addTask identifier title content (appWorkspace app)
       let todoTasks = tasksByStatus (taskStatus task)
                         (categoryTasks identifier workspace)
           position = max 0 (length todoTasks - 1)

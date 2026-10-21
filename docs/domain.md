@@ -10,8 +10,9 @@ The domain module defines the vocabulary of the application and the only legal t
 | `CategoryName` | Newtype over `String`, validated category name. |
 | `TaskId` | Newtype over `Int`, stable identifier of a task. |
 | `TaskTitle` | Newtype over `String`, validated task title. |
+| `TaskContent` | Newtype over `String`, validated task note. It may be empty. |
 | `Category` | Identifier and validated name. |
-| `Task` | Identifier, title, status and owning category. |
+| `Task` | Identifier, title, note, status and owning category. |
 | `Status` | `Todo`, `Doing` or `Done`. |
 | `Workspace` | Ordered categories and ordered tasks. |
 
@@ -19,13 +20,13 @@ The domain module defines the vocabulary of the application and the only legal t
 
 ## Validation
 
-`mkCategoryName` and `mkTaskName` trim surrounding whitespace and then check three rules:
+`mkCategoryName`, `mkTaskTitle` and `mkTaskContent` trim surrounding whitespace and then check three rules:
 
-1. The result cannot be empty.
+1. The result cannot be empty, except for a task note.
 2. The text cannot contain control characters, including tabs and newlines.
-3. The text cannot exceed its limit. The limit is 40 characters for a category name and 120 for a task title.
+3. The text cannot exceed its limit. The limits are 40 characters for a category name, 120 for a task title and 500 for a task note.
 
-Control characters are rejected because the persistence format is line and tab based. This keeps every title and name on a single record field.
+Control characters are rejected because the persistence format is line and tab based. This keeps every title, name and note on a single record field. An empty task note is valid and is shown as `(empty)` on the details screen.
 
 ## Workspace invariants
 
@@ -43,7 +44,7 @@ A broken invariant becomes `DuplicateCategoryId`, `DuplicateCategoryName`, `Dupl
 | Function | Result |
 | --- | --- |
 | `addCategory name workspace` | The new `Category` and the new `Workspace`. |
-| `addTask category title workspace` | The new `Task` and the new `Workspace`. New tasks start at `Todo`. |
+| `addTask category title content workspace` | The new `Task` and the new `Workspace`. New tasks start at `Todo`. |
 | `moveTask identifier status workspace` | A workspace with the task status replaced. |
 | `advanceTask identifier workspace` | A workspace with the task moved along the status cycle. |
 | `deleteTask identifier workspace` | A workspace without the task. |

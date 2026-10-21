@@ -8,6 +8,7 @@ module Ansido.Domain
   , CategoryName (..)
   , TaskId (..)
   , TaskTitle (..)
+  , TaskContent (..)
     -- * Entities.
   , Category (..)
   , Status (..)
@@ -20,6 +21,7 @@ module Ansido.Domain
   , emptyWorkspace
   , mkCategoryName
   , mkTaskTitle
+  , mkTaskContent
   , mkWorkspace
     -- * Queries.
   , workspaceCategories
@@ -68,6 +70,10 @@ newtype TaskId = TaskId { taskIdValue :: Int }
 newtype TaskTitle = TaskTitle { taskTitleText :: String }
   deriving (Eq, Ord, Show)
 
+-- | Validated note attached to a task. It may be empty.
+newtype TaskContent = TaskContent { taskContentText :: String }
+  deriving (Eq, Ord, Show)
+
 -- Entities.
 --------------------------------------------------------------------------------
 
@@ -81,10 +87,11 @@ data Category = Category
 data Status = Todo | Doing | Done
   deriving (Eq, Ord, Show, Enum, Bounded)
 
--- | A task with a title, a status and the category that owns it.
+-- | A task with a title, a note, a status and the category that owns it.
 data Task = Task
   { taskId       :: TaskId
   , taskTitle    :: TaskTitle
+  , taskContent  :: TaskContent
   , taskStatus   :: Status
   , taskCategory :: CategoryId
   } deriving (Eq, Show)
@@ -161,6 +168,16 @@ mkTaskTitle :: String -> Either DomainError TaskTitle
 mkTaskTitle raw =
   TaskTitle <$> validateText EmptyTaskTitle taskTitleLimit
                             TaskTitleTooLong raw
+
+-- | Validates a task note. An empty note is allowed.
+mkTaskContent :: String -> Either DomainError TaskContent
+mkTaskContent raw =
+  let cleaned = trim raw
+  in if any isControl cleaned
+       then Left ControlCharacterInText
+       else if length cleaned > taskContentLimit
+         then Left (TaskContentTooLong taskContentLimit)
+         else Right (TaskContent cleaned)
 
 validateText :: DomainError -> Int -> (Int -> DomainError) -> String
              -> Either DomainError String
@@ -247,13 +264,13 @@ addCategory name workspace
         Right (category, updated)
 
 -- | Adds a task to a category, always starting at 'Todo'.
-addTask :: CategoryId -> TaskTitle -> Workspace
+addTask :: CategoryId -> TaskTitle -> TaskContent -> Workspace
         -> Either DomainError (Task, Workspace)
-addTask identifier title workspace
+addTask identifier title content workspace
   | not (any ((== identifier) . categoryId) (workspaceCategories workspace)) =
       Left (UnknownCategory identifier)
   | otherwise =
-      let task = Task (nextTaskId workspace) title Todo identifier
+      let task = Task (nextTaskId workspace) title content Todo identifier
       in do
         updated <- mkWorkspace
           (workspaceCategories workspace)
@@ -314,6 +331,7 @@ data DomainError
   | EmptyTaskTitle
   | CategoryNameTooLong Int
   | TaskTitleTooLong Int
+  | TaskContentTooLong Int
   | ControlCharacterInText
   | UnknownCategory CategoryId
   | UnknownTask TaskId
@@ -333,6 +351,8 @@ domainErrorMessage err =
       "The category name must have at most " <> show limit <> " characters."
     TaskTitleTooLong limit ->
       "The task title must have at most " <> show limit <> " characters."
+    TaskContentTooLong limit ->
+      "The task note must have at most " <> show limit <> " characters."
     ControlCharacterInText ->
       "The text cannot contain control characters."
     UnknownCategory identifier ->
@@ -352,6 +372,9 @@ categoryNameLimit = 40
 
 taskTitleLimit :: Int
 taskTitleLimit = 120
+
+taskContentLimit :: Int
+taskContentLimit = 500
 
 clamp :: Ord a => a -> a -> a -> a
 clamp low high value = max low (min high value)

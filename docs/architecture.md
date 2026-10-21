@@ -38,7 +38,7 @@ The arrows point toward the modules being used. No UI module writes files, and n
 
 ## Data flow
 
-1. `readKey` returns a `Char`.
+1. `readKeyEvent` returns a `Key`, decoding ANSI arrow sequences into `KeyUp`, `KeyDown`, `KeyLeft` and `KeyRight`.
 2. `commandForKey` turns the key and the current screen into a `Command`.
 3. `execute` either handles the command directly, such as redraw or quit, or starts line input.
 4. `update` receives an `Action` and returns a new `AppState` or a `DomainError`.
@@ -58,7 +58,21 @@ The pure layers never throw. Domain failures use `DomainError`, persistence fail
 
 ## Reusable components
 
-The header, footer, category bar, notices, truncation, status blocks and prompt line live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The board, help table and category table are assembled from Ansiform groups and tables rather than hand-formatted strings.
+The header, footer, category bar, notices, truncation, status blocks and prompt lines live in `Ansido.Ui.Components`. Every screen uses the same `UiTheme`, so colors and spacing stay consistent. The board, help table and category table are assembled from Ansiform groups and tables rather than hand-formatted strings.
+
+## Ansiform notes
+
+Ansiform fits the application well. The split between pure builders and the drawing layer keeps pages testable, `Maybe Table` makes malformed tables explicit as data, and the `Theme` record and solid bars make the chrome consistent across screens.
+
+Some friction points came up while building the interface:
+
+- The Haddock synopsis for `printerSolidLineCenter` lists a `Block`, but the implementation takes `[Block]`. The compiler catches it, but the documentation mismatch costs a build cycle.
+- `printerGroupsBordered` and the other bordered group printers expect every group to have the same number of blocks. Unequal groups produce misaligned borders, so the board pads every column with empty blocks. Automatic padding or a named helper would remove this trap.
+- `readLineAt` already wraps `withLineInput`. The documentation says it reads a line with echo, but does not warn that wrapping it again breaks the terminal mode.
+- Multi-line prompts rely on exact line counts. A higher-level helper that takes a page plus a list of prompts and handles the cursor arithmetic would make forms less fragile.
+- The `Number` newtype is convenient, but its `Num` instance lets arithmetic read like plain integers, so code that subtracts needs care to keep the non-negative invariant obvious.
+
+The feedback is positive overall: the library provided the groups, tables, rules, solid bars and input primitives needed without pulling in a larger TUI framework.
 
 ## Selection model
 

@@ -4,8 +4,9 @@ module Main (main) where
 --------------------------------------------------------------------------------
 import           System.Exit (exitFailure)
 
+import           Ansido.App.Command (Command (..), Key (..), commandForKey)
 import           Ansido.App.State
-import           Ansido.App.Update (update)
+import           Ansido.App.Update (backAction, update)
 import           Ansido.Domain
 import           Ansido.Persistence
 import           Ansido.Ui.Components (Notice (..), NoticeKind (..),
@@ -49,9 +50,11 @@ buildFixture = do
   let category = fst addedCategory
       workspace1 = snd addedCategory
   titleA <- rightOr (mkTaskTitle "Write docs")
-  addedA <- rightOr (addTask (categoryId category) titleA workspace1)
+  contentA <- rightOr (mkTaskContent "First note")
+  addedA <- rightOr (addTask (categoryId category) titleA contentA workspace1)
   titleB <- rightOr (mkTaskTitle "Ship release")
-  addedB <- rightOr (addTask (categoryId category) titleB (snd addedA))
+  contentB <- rightOr (mkTaskContent "")
+  addedB <- rightOr (addTask (categoryId category) titleB contentB (snd addedA))
   pure (category, snd addedB)
 
 fixtureWorkspace :: Either String Workspace
@@ -66,6 +69,7 @@ fixtureCategory = fst <$> buildFixture
 tests :: [(String, Check)]
 tests =
   [ testTaskTitleValidation
+  , testTaskContentValidation
   , testCategoryNameValidation
   , testAddTask
   , testAddTaskUnknownCategory
@@ -78,6 +82,7 @@ tests =
   , testDecodeEmpty
   , testDecodeBadHeader
   , testDecodeBadStatus
+  , testDecodeVersion1
   , testWindowStart
   , testWindowMiddle
   , testWindowEnd
@@ -91,6 +96,8 @@ tests =
   , testSelectUnknownCategory
   , testAddTaskWithoutCategory
   , testDetailsWithoutSelection
+  , testArrowKeys
+  , testBackActions
   ]
 
 testTaskTitleValidation :: (String, Check)
@@ -102,6 +109,19 @@ testTaskTitleValidation =
       check "control character accepted" (isLeft (mkTaskTitle "a\tb"))
       title <- rightOr (mkTaskTitle "  Write docs  ")
       checkEqual "title is trimmed" "Write docs" (taskTitleText title)
+  )
+
+testTaskContentValidation :: (String, Check)
+testTaskContentValidation =
+  ( "task content validation"
+  , do
+      emptyContent <- rightOr (mkTaskContent "")
+      checkEqual "empty content allowed" "" (taskContentText emptyContent)
+      content <- rightOr (mkTaskContent "  Some note  ")
+      checkEqual "content is trimmed" "Some note" (taskContentText content)
+      check "control character accepted" (isLeft (mkTaskContent "a\tb"))
+      check "long content accepted"
+        (isLeft (mkTaskContent (replicate 501 'x')))
   )
 
 testCategoryNameValidation :: (String, Check)
@@ -121,11 +141,13 @@ testAddTask =
       let category = fst fixture
           workspace = snd fixture
       title <- rightOr (mkTaskTitle "Review")
-      added <- rightOr (addTask (categoryId category) title workspace)
+      content <- rightOr (mkTaskContent "Review note")
+      added <- rightOr (addTask (categoryId category) title content workspace)
       let task = fst added
           updated = snd added
       checkEqual "task id" 3 (taskIdValue (taskId task))
       checkEqual "task status" Todo (taskStatus task)
+      checkEqual "task content" "Review note" (taskContentText (taskContent task))
       checkEqual "task count" 3 (length (workspaceTasks updated))
   )
 
@@ -135,7 +157,9 @@ testAddTaskUnknownCategory =
   , do
       workspace <- fixtureWorkspace
       title <- rightOr (mkTaskTitle "Review")
-      check "unknown category accepted" (isLeft (addTask (CategoryId 99) title workspace))
+      content <- rightOr (mkTaskContent "Note")
+      check "unknown category accepted"
+        (isLeft (addTask (CategoryId 99) title content workspace))
   )
 
 testMoveTask :: (String, Check)
@@ -187,7 +211,8 @@ testWorkspaceInvariants =
       category <- fixtureCategory
       workspace <- fixtureWorkspace
       let categoryDuplicate = Category (categoryId category) (categoryName category)
-          task = Task (TaskId 1) (TaskTitle "x") Todo (CategoryId 99)
+          task = Task (TaskId 1) (TaskTitle "x") (TaskContent "") Todo
+                     (CategoryId 99)
       check "duplicate category id accepted"
         (isLeft (mkWorkspace [category, categoryDuplicate] (workspaceTasks workspace)))
       check "unknown category accepted"
@@ -219,6 +244,20 @@ testDecodeBadStatus =
   ( "decode bad status"
   , check "bad status accepted"
       (isLeft (decodeWorkspace "ansido\t1\ntask\t1\t1\tlater\tTitle\n"))
+  )
+
+testDecodeVersion1 :: (String, Check)
+testDecodeVersion1 =
+  ( "decode version 1"
+  , case decodeWorkspace
+      "ansido\t1\ncategory\t1\tWork\ntask\t1\t1\ttodo\tLegacy\n" of
+      Left err -> Left (show err)
+      Right workspace ->
+        case findTask (TaskId 1) workspace of
+          Nothing -> Left "task missing"
+          Just task ->
+            checkEqual "legacy content" ""
+              (taskContentText (taskContent task))
   )
 
 testWindowStart :: (String, Check)
@@ -301,11 +340,17 @@ testSubmitTask =
   , do
       category <- fixtureCategory
       workspace <- fixtureWorkspace
-      app <- rightOr (update (SubmitTask "New task") (initialAppState workspace))
+      app <- rightOr (update (SubmitTask "New task" "Some note")
+                            (initialAppState workspace))
       checkEqual "task count" 3 (length (workspaceTasks (appWorkspace app)))
       checkEqual "board restored" BoardScreen (uiScreen (appUi app))
       checkEqual "new task selected" 2 (rowIndexValue (uiRow (appUi app)))
       checkEqual "category kept" (Just (categoryId category)) (uiCategory (appUi app))
+      case selectedTask app of
+        Just task ->
+          checkEqual "new task note" "Some note"
+            (taskContentText (taskContent task))
+        Nothing -> Left "no selected task"
   )
 
 testSubmitCategory :: (String, Check)
@@ -346,6 +391,34 @@ testDetailsWithoutSelection =
       case uiNotice (appUi app) of
         Just notice -> checkEqual "info notice" NoticeInfo (noticeKind notice)
         Nothing     -> Left "no notice"
+  )
+
+testArrowKeys :: (String, Check)
+testArrowKeys =
+  ( "arrow keys"
+  , do
+      checkEqual "up" (Just (MoveRowCommand Previous))
+        (commandForKey BoardScreen KeyUp)
+      checkEqual "down" (Just (MoveRowCommand Next))
+        (commandForKey BoardScreen KeyDown)
+      checkEqual "left" (Just (MoveColumnCommand Previous))
+        (commandForKey BoardScreen KeyLeft)
+      checkEqual "right" (Just (MoveColumnCommand Next))
+        (commandForKey BoardScreen KeyRight)
+      checkEqual "escape" (Just BackCommand)
+        (commandForKey BoardScreen KeyEscape)
+      checkEqual "details up" Nothing
+        (commandForKey (DetailsScreen (TaskId 1)) KeyUp)
+  )
+
+testBackActions :: (String, Check)
+testBackActions =
+  ( "back actions"
+  , do
+      checkEqual "board back" OpenCategories (backAction BoardScreen)
+      checkEqual "details back" OpenBoard
+        (backAction (DetailsScreen (TaskId 1)))
+      checkEqual "category back" OpenBoard (backAction CategoryScreen)
   )
 
 -- Main.

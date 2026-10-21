@@ -7,10 +7,10 @@ The interface is built with Ansiform pages, sections, groups, tables and immedia
 | Screen | Purpose |
 | --- | --- |
 | Board | Todo, Doing and Done columns for the selected category. |
-| Details | Read-only view of the selected task. |
+| Details | Read-only view of the selected task, including its note. |
 | Help | Key reference in a bordered table. |
 | Categories | Category list with task counts and selection. |
-| Add task | Board preview with a title prompt at the bottom. |
+| Add task | Board preview with title and note prompts at the bottom. |
 | Add category | Category preview with a name prompt at the bottom. |
 
 Every screen shares the same header, category bar and footer. The header shows the application name and version. The category bar always shows all categories, with the active one highlighted. The footer lists the shortcuts available on the current screen.
@@ -21,14 +21,16 @@ Every screen shares the same header, category bar and footer. The header shows t
 
 | Key | Action |
 | --- | --- |
-| `h` / `l` | Move one column left or right. |
-| `j` / `k` | Move one row down or up. |
+| `↑` / `↓` | Move one row up or down. |
+| `←` / `→` | Move one column left or right. |
+| `h` / `j` / `k` / `l` | Vim-style alternative to the arrow keys. |
 | `1` / `2` / `3` | Focus Todo, Doing or Done. |
 | `a` | Open the new task prompt. |
 | `m` | Advance the selected task along the status cycle. |
 | `d` | Delete the selected task. |
 | `v` | Open task details. |
-| `c` | Open the category screen. |
+| `c` | Open the category screen directly. |
+| `b` or `Esc` | Go back to the category selection. |
 | `?` | Open help. |
 | `r` | Redraw the current page. |
 | `x` | Exit. |
@@ -45,21 +47,29 @@ Every screen shares the same header, category bar and footer. The header shows t
 
 `b`, `?` or `Esc` returns to the board. `x` exits.
 
+### Back navigation
+
+The back key follows the screen hierarchy: details returns to the board, and the board returns to the category selection. From the category selection, back returns to the board. This makes `b` a consistent way to leave the notes view and reach the categories.
+
 ### Prompts
 
-The prompt accepts a line of text and confirms with `Enter`. Empty input cancels the prompt and returns to the previous screen. Input is validated by the domain smart constructors, so an empty title, an overlong title or a title with control characters becomes a notice instead of a broken record.
+The task prompt has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the prompt. An empty note is valid and creates a task with `(empty)` on the details screen. The category prompt has a single line. Empty category input cancels and returns to the category selection.
+
+Input is validated by the domain smart constructors, so an overlong title, an overlong note or a text with control characters becomes a notice instead of a broken record.
 
 ## Layout
 
 The page is composed of:
 
-1. A rule and a solid title bar.
-2. A centered subtitle with the version.
-3. The category bar.
-4. An optional notice.
-5. The screen body.
-6. A solid footer bar.
-7. An optional prompt line.
+1. A solid title bar with the application name.
+2. A blank line.
+3. A centered subtitle with the version.
+4. The category bar.
+5. A full-width rule below the category bar.
+6. An optional notice.
+7. The screen body.
+8. A solid footer bar.
+9. One or two optional prompt lines.
 
 The board uses three Ansiform groups inside a light border. Each group has a header with the status and task count. Column bodies are padded to the same height before rendering, because the bordered group printer expects every column to have the same number of blocks.
 
@@ -73,7 +83,13 @@ Task titles are truncated to 20 visible columns, including the three dots. `trun
 
 ## Text input
 
-Prompts are drawn as the last section of the page. `readLineAt 1 column` moves the cursor up to the prompt line and places it after the label. The function already wraps `withLineInput`, so it must not be wrapped again. After `Enter`, the cursor sits one line below the prompt, matching the line count tracked by `Draw.State`.
+Prompts are drawn as the last sections of the page. For a new task, the title prompt is two lines above the final cursor position, so the runner calls `readLineAt 2`. After the title is confirmed, the cursor sits on the note prompt line, so the runner calls `readLineAt 0`. For a category, the single prompt is one line above the final cursor position, so the runner calls `readLineAt 1`.
+
+`readLineAt` already wraps `withLineInput`, so it must not be wrapped again. After the last `Enter`, the cursor sits one line below the last prompt, matching the line count tracked by `Draw.State`.
+
+## Key decoding
+
+Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. A lone `Esc` becomes the back key. Unrecognized sequences are treated as the back key.
 
 ## Theme
 

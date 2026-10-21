@@ -68,7 +68,7 @@ data Action
   | MoveRow Direction
   | AdvanceSelected
   | DeleteSelected
-  | SubmitTask String
+  | SubmitTask String String
   | SubmitCategory String
   | SetNotice Notice
   | ClearNotice

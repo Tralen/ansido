@@ -10,13 +10,14 @@ The name combines ANSI and "do", as in things to do.
 
 ## Status
 
-Version 0.1.0 is functional. It includes:
+Version 0.2.0 is functional. It includes:
 
 - Task category creation and selection.
 - A board with Todo, Doing and Done columns.
-- Immediate navigation with letter shortcuts.
-- Task creation, advancement and deletion.
-- A task details page.
+- Arrow key navigation, with Vim keys as an alternative.
+- Task creation with a title and a note.
+- Task advancement and deletion.
+- A task details page with the note.
 - A help page.
 - A shared theme for header, footer and menus.
 - Plain text persistence with errors as data.
@@ -36,7 +37,7 @@ The data file defaults to `$HOME/.ansido/board.tsv`. Set `ANSIDO_FILE` to use an
 ANSIDO_FILE=./workspace.tsv cabal run ansido
 ```
 
-Press `c` to open categories and `n` to create the first one. Press `a` on the board to add a task, `m` to advance it, `d` to delete it and `?` for the full key reference.
+Press `c` to open categories and `n` to create the first one. Press `a` on the board to add a task: type the title, press Enter, type the note and press Enter again. Use the arrow keys to move, `m` to advance a task, `d` to delete it, `b` to go back and `?` for the full key reference.
 
 ## Documentation
 

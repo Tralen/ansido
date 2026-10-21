@@ -3,7 +3,8 @@
 -- Command resolution is pure. Actions that need text input are started by
 -- the runner, which owns the line input and the persistence edge.
 module Ansido.App.Command
-  ( Command (..)
+  ( Key (..)
+  , Command (..)
   , commandForKey
   ) where
 
@@ -12,6 +13,16 @@ import           Data.Char (digitToInt, isDigit, toLower)
 
 import           Ansido.App.State (Direction (..), Screen (..))
 import           Ansido.Domain (Status (..))
+
+-- | A decoded terminal key, with arrows separated from escape sequences.
+data Key
+  = KeyCharacter Char
+  | KeyUp
+  | KeyDown
+  | KeyLeft
+  | KeyRight
+  | KeyEscape
+  deriving (Eq, Show)
 
 -- | High level commands produced by the keyboard.
 data Command
@@ -32,14 +43,28 @@ data Command
   deriving (Eq, Show)
 
 -- | Resolves a key for the current screen.
-commandForKey :: Screen -> Char -> Maybe Command
+commandForKey :: Screen -> Key -> Maybe Command
 commandForKey screen key =
+  case key of
+    KeyEscape -> Just BackCommand
+    KeyUp    -> boardOnly (MoveRowCommand Previous)
+    KeyDown  -> boardOnly (MoveRowCommand Next)
+    KeyLeft  -> boardOnly (MoveColumnCommand Previous)
+    KeyRight -> boardOnly (MoveColumnCommand Next)
+    KeyCharacter char -> characterCommand screen char
+  where
+    boardOnly command =
+      case screen of
+        BoardScreen -> Just command
+        _           -> Nothing
+
+characterCommand :: Screen -> Char -> Maybe Command
+characterCommand screen key =
   case key of
     'x' -> Just QuitCommand
     'X' -> Just QuitCommand
     'r' -> Just RedrawCommand
     'R' -> Just RedrawCommand
-    '\ESC' -> Just BackCommand
     _ ->
       case screen of
         BoardScreen      -> boardCommand (toLower key)

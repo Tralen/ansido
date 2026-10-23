@@ -9,3 +9,5 @@ cabal.project.local
 .secrets*
 .env
 .env.*
+LANGUAGE.md
+EDITORIAL.md

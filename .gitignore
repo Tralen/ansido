@@ -11,3 +11,4 @@ cabal.project.local
 .env.*
 LANGUAGE.md
 EDITORIAL.md
+COMPLIANCE.md

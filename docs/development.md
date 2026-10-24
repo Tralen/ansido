@@ -65,11 +65,11 @@ hlint src test app
 
 `fourmolu.yaml` is the single source of the formatting style. `fourmolu --mode check src test app` reports any file that differs, and `fourmolu --mode inplace src test app` rewrites it. CI repeats the check in the `formatting` job. `hlint` reports style hints and is not a gate.
 
-Install the Git hooks once with `pre-commit install`; they scan staged changes with gitleaks and format staged Haskell files with the local Fourmolu hook, which requires `fourmolu` on `PATH`. CI scans the full history and the worktree with gitleaks through the `privacy` job.
+Install the Git hooks once with `pre-commit install`; they scan staged changes with gitleaks and format staged Haskell files with the local Fourmolu hook, which requires `fourmolu` on `PATH`. CI scans the full history with gitleaks through the `Secrets` workflow.
 
 ## Cross-platform
 
-The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all` and `cabal test all` on all three systems through `.github/workflows/ci.yml`.
+The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on each system, with Cabal 3.18.1.0. The actions are pinned by commit SHA.
 
 The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-latest` image ships the macOS 26/27 SDK, whose `arm64e.x1-macos` entries in the `.tbd` stub files are rejected by the linker that GHC 9.14.1 uses. Revisit the pin when a newer GHC links against that SDK.
 

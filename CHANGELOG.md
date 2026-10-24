@@ -93,8 +93,8 @@
 - Added a Fourmolu 0.21.0.0 configuration, a CI formatting gate and a local pre-commit hook, and formatted the Haskell sources.
 - Documented SSH-signed commits and tags, including the signing configuration and verification steps.
 - Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.
-- Added a gitleaks history scan to CI and a pre-commit configuration for staged changes.
-- Aligned CI with the release template: GHC 9.2.8 and 9.14.1, dependency cache, `cabal check` and `cabal sdist`.
+- Added a gitleaks history scan to CI and a pre-commit configuration for staged changes, using the pinned gitleaks action.
+- Aligned CI with the release template: GHC 9.2.8 and 9.14.1 on every system, actions pinned by commit SHA, Cabal 3.18.1.0, dependency cache, `cabal check`, `cabal haddock` and `cabal sdist`.
 - Corrected the package description, README data file path, Windows instructions, versioning policy and stale feature claims.
 - Fixed stale comments and documentation around statuses, `reads`, Delete key decoding and startup errors.
 - Added the 0.9.0 feature section to the correct CHANGELOG section.

@@ -90,6 +90,7 @@
 *Patches, bug fixes, and minor updates.*
 
 ### 0.9.1
+- Changed the add-task footer hint from `empty cancel` to `empty title cancels`.
 - Added a Fourmolu 0.21.0.0 configuration, a CI formatting gate and a local pre-commit hook, and formatted the Haskell sources.
 - Documented SSH-signed commits and tags, including the signing configuration and verification steps.
 - Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.

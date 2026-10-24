@@ -69,7 +69,7 @@ Install the Git hooks once with `pre-commit install`; they scan staged changes w
 
 ## Cross-platform
 
-The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on each system, with Cabal 3.18.1.0. The actions are pinned by commit SHA.
+The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, with Cabal 3.18.1.0. GHC 9.2.8 on Windows is omitted because it resolves `terminal-size` 0.3.3, which lacks the `hSize` that Ansiform uses; 0.3.4 requires `Win32 >= 2.13.2.0`. The actions are pinned by commit SHA.
 
 The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-latest` image ships the macOS 26/27 SDK, whose `arm64e.x1-macos` entries in the `.tbd` stub files are rejected by the linker that GHC 9.14.1 uses. Revisit the pin when a newer GHC links against that SDK.
 

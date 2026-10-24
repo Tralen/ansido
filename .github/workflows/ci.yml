@@ -26,8 +26,9 @@ jobs:
             ghc-version: "9.2.8"
           - os: macos-15
             ghc-version: "9.14.1"
-          - os: windows-latest
-            ghc-version: "9.2.8"
+          # GHC 9.2.8 on Windows is omitted: it resolves terminal-size 0.3.3,
+          # which has no hSize, because 0.3.4 requires Win32 >= 2.13.2.0.
+          # Restore the entry when Ansiform stops depending on hSize.
           - os: windows-latest
             ghc-version: "9.14.1"
     steps:

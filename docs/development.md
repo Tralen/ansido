@@ -69,7 +69,11 @@ Install the Git hooks once with `pre-commit install`; they scan staged changes w
 
 ## Cross-platform
 
-The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, with Cabal 3.18.1.0. GHC 9.2.8 on Windows is omitted because it resolves `terminal-size` 0.3.3, which lacks the `hSize` that Ansiform uses; 0.3.4 requires `Win32 >= 2.13.2.0`. The actions are pinned by commit SHA.
+The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, with Cabal 3.18.1.0. The actions are pinned by commit SHA.
+
+### Windows with GHC 9.2.8
+
+GHC 9.2.8 on Windows is not in the matrix. Ansiform uses `hSize` from `System.Console.Terminal.Size`, but its bound `terminal-size >= 0.3 && < 0.4` lets the solver pick 0.3.3 on that toolchain, and 0.3.3 does not export `hSize`. The release that adds it, 0.3.4, requires `Win32 >= 2.13.2.0`, which the GHC 9.2.8 Windows environment cannot satisfy, so the build fails with `Variable not in scope: hSize`. Keep Windows on GHC 9.14.1. Restore the entry after Ansiform stops depending on `hSize` or bounds `terminal-size` to a version that works there; the reason is also commented in `ci.yml`.
 
 The macOS job uses `macos-15` instead of `macos-latest`. The current `macos-latest` image ships the macOS 26/27 SDK, whose `arm64e.x1-macos` entries in the `.tbd` stub files are rejected by the linker that GHC 9.14.1 uses. Revisit the pin when a newer GHC links against that SDK.
 
@@ -88,7 +92,7 @@ Publishing is manual. CI only builds and tests.
 1. Confirm that the version in `ansido.cabal` matches the tag you are about to create, and that `CHANGELOG.md` has an entry for it.
 2. Run `cabal check`, `cabal test all`, `cabal sdist` and `cabal haddock --haddock-for-hackage` locally.
 3. Create a signed tag with `git tag -s v<version> -m "ansido <version>"` and push it. Verify it with `git tag -v v<version>`.
-4. Run the `Release` workflow manually (`workflow_dispatch`) with the tag as input. The `release` environment gates the publish job. The workflow validates the tag against `ansido.cabal`, builds the executable on Linux, macOS and Windows, generates `SHA256SUMS`, attests build provenance and attaches the archives to the GitHub release.
+4. Run the `Release` workflow manually (`workflow_dispatch`) with the tag as input. The workflow validates the tag against `ansido.cabal`, builds the executable on Linux, macOS and Windows, generates `SHA256SUMS`, attests build provenance and attaches the archives to the GitHub release. The publish job scopes `contents: write` and uses the automatic `GITHUB_TOKEN`; it needs no environment or extra secret.
 
 Asset names follow `ansido-<version>-<os>-<arch>`. Linux and macOS use `.tar.gz`; Windows uses `.zip`. The Linux binary is built on Ubuntu 22.04 for a broader glibc range, and the macOS binary is built on `macos-15` for arm64.
 
@@ -114,7 +118,7 @@ Commits and tags are signed with SSH. Git needs `gpg.format ssh`, `user.signingk
 
 4. Optionally upload the documentation with `cabal upload -d --publish -t "$HACKAGE_TOKEN"`.
 
-The `Hackage` workflow is a manual `workflow_dispatch` alternative that runs in the `hackage` environment. It never runs on push or tag, so a candidate is always created before publication. Create the `hackage` environment and store the registry token there as the `HACKAGE_TOKEN` environment secret. The `release` environment belongs to `release.yml` and is not read by this workflow.
+The `Hackage` workflow is a manual `workflow_dispatch` alternative that runs in the `hackage` environment. It never runs on push or tag, so a candidate is always created before publication. Create the `hackage` environment and store the registry token there as the `HACKAGE_TOKEN` environment secret. The GitHub release workflow does not read this secret and has no environment.
 
 ## Versioning
 

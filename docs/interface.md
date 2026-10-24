@@ -40,7 +40,7 @@ Every screen shares the same header, category bar and footer. The header shows t
 
 The status cycle is `Todo -> Doing -> Done -> Todo`. Under the original order the selected row keeps its place because the table keeps insertion order; under a sort it follows the task to the new position.
 
-The footer shows the arrow keys without a label, followed by `Enter add`, `Space status`, `e edit`, `f filter`, `o sort`, `Del del`, `? help`, the back icon and `x exit`. The `w` and `s` keys still work, but they are documented here and on the help screen instead of the footer.
+The footer shows two solid bars on the board. The first lists `Enter add`, `Space status`, `e edit`, `f filter` and `o sort`; the second lists the arrow keys without a label, `Del del`, `? help`, the back icon and `x exit`. The `w` and `s` keys still work, but they are documented here and on the help screen instead of the footer.
 
 ### Details
 
@@ -104,7 +104,7 @@ The page is composed of:
 6. A full-width rule below the category bar.
 7. The screen body.
 8. An optional notice directly below the body, followed by a blank line before the footer.
-9. A solid footer bar.
+9. One or two solid footer bars; the board uses two.
 10. One or two optional prompt lines.
 
 The board, category and help tables use the borderless mode of the Ansiform table printer. The column alignment and truncation remain.

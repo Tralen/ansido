@@ -50,10 +50,10 @@ headerSection theme title subtitle =
   where
     base = uiBase theme
 
--- | Solid footer bar with the available shortcuts.
-footerSection :: UiTheme -> [Block] -> Section
-footerSection theme hints =
-    sectionTop 1 [printerSolidLineLeft 0 1 (themeBar base) hints]
+-- | Solid footer bars, one per row of shortcuts.
+footerSection :: UiTheme -> [[Block]] -> Section
+footerSection theme rows =
+    sectionTop 1 (map (printerSolidLineLeft 0 1 (themeBar base)) rows)
   where
     base = uiBase theme
 

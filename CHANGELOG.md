@@ -3,7 +3,8 @@
 ## Version History
 *Major updates and feature releases.*
 
-### 0.10.0
+### 1.0.0
+- Split the board footer into two solid bars: `Enter add`, `Space status`, `e edit`, `f filter` and `o sort` on the first, and `↑↓`, `Del del`, `? help`, `⌫ back` and `x exit` on the second.
 - The create forms now use the Ansiform line editor with an empty initial buffer, so arrow keys, `Home`, `End` and `Delete` move the cursor instead of inserting control characters in both create and edit modes.
 - Added a board sort that cycles with `o` through insertion order, status and title, shown on a `Sort:` line below the filter.
 - Sorting is stable; title order ignores case, and every filter or sort change keeps the selected task selected while it remains visible.

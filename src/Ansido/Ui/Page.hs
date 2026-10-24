@@ -561,53 +561,63 @@ categoryDetailsBody theme app =
 -- Footer.
 --------------------------------------------------------------------------------
 
-footerHints :: UiTheme -> Screen -> [Block]
+footerHints :: UiTheme -> Screen -> [[Block]]
 footerHints theme screen =
     case screen of
-        BoardScreen ->
-            [ blockSimple "↑↓" (uiSelected theme)
-            , keyHintText theme "Enter" "add"
-            , keyHintText theme "Space" "status"
-            , keyHint theme 'e' "edit"
-            , keyHint theme 'f' "filter"
-            , keyHint theme 'o' "sort"
-            , keyHintText theme "Del" "del"
-            , keyHintText theme "?" "help"
-            , keyHintText theme "⌫" "back"
-            , keyHint theme 'x' "exit"
-            ]
+        BoardScreen -> [boardActions, boardNavigation]
         DetailsScreen _ ->
-            [ keyHintText theme "⌫ / v" "back"
-            , keyHintText theme "Space" "status"
-            , keyHint theme 'e' "edit"
-            , keyHintText theme "Del" "del"
-            , keyHint theme 'x' "exit"
-            ]
+            single
+                [ keyHintText theme "⌫ / v" "back"
+                , keyHintText theme "Space" "status"
+                , keyHint theme 'e' "edit"
+                , keyHintText theme "Del" "del"
+                , keyHint theme 'x' "exit"
+                ]
         EditTaskScreen _ ->
-            [keyHintText theme "Enter" "confirm"]
+            single [keyHintText theme "Enter" "confirm"]
         EditCategoryScreen _ ->
-            [keyHintText theme "Enter" "confirm"]
+            single [keyHintText theme "Enter" "confirm"]
         HelpScreen ->
-            [ keyHintText theme "⌫" "back"
-            , keyHint theme 'x' "exit"
-            ]
+            single
+                [ keyHintText theme "⌫" "back"
+                , keyHint theme 'x' "exit"
+                ]
         CategoryScreen ->
-            [ blockSimple "↑↓" (uiSelected theme)
-            , keyHintText theme "Enter" "open"
-            , keyHint theme 'n' "new"
-            , keyHint theme 'e' "edit"
-            , keyHintText theme "Del" "del"
-            , keyHintText theme "⌫" "back"
-            , keyHint theme 'x' "exit"
-            ]
+            single
+                [ blockSimple "↑↓" (uiSelected theme)
+                , keyHintText theme "Enter" "open"
+                , keyHint theme 'n' "new"
+                , keyHint theme 'e' "edit"
+                , keyHintText theme "Del" "del"
+                , keyHintText theme "⌫" "back"
+                , keyHint theme 'x' "exit"
+                ]
         AddTaskScreen ->
-            [ keyHintText theme "Enter" "confirm"
-            , keyHintText theme "empty title" "cancels"
-            ]
+            single
+                [ keyHintText theme "Enter" "confirm"
+                , keyHintText theme "empty title" "cancels"
+                ]
         AddCategoryScreen ->
-            [ keyHintText theme "Enter" "confirm"
-            , keyHintText theme "empty" "cancel"
-            ]
+            single
+                [ keyHintText theme "Enter" "confirm"
+                , keyHintText theme "empty" "cancel"
+                ]
+  where
+    single row = [row]
+    boardActions =
+        [ keyHintText theme "Enter" "add"
+        , keyHintText theme "Space" "status"
+        , keyHint theme 'e' "edit"
+        , keyHint theme 'f' "filter"
+        , keyHint theme 'o' "sort"
+        ]
+    boardNavigation =
+        [ blockSimple "↑↓" (uiSelected theme)
+        , keyHintText theme "Del" "del"
+        , keyHintText theme "?" "help"
+        , keyHintText theme "⌫" "back"
+        , keyHint theme 'x' "exit"
+        ]
 
 -- Prompt.
 --------------------------------------------------------------------------------

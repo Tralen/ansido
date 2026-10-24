@@ -276,7 +276,7 @@ boardRows theme app =
     ui = appUi app
     tasks = visibleTasks app
     selected = selectedTaskId app
-    win = windowAround boardWindowSize (rowIndexValue (uiRow ui)) tasks
+    win = windowAround boardWindowSize (fromIntegral (rowIndexValue (uiRow ui))) tasks
     above = if windowAbove win then [markerCells theme] else []
     below = if windowBelow win then [markerCells theme] else []
 

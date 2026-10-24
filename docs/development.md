@@ -43,10 +43,11 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Category navigation with arrows, `j`/`k`, `w`/`s` and the `Enter` board shortcut.
 - Initial state on the category screen, vertical navigation, status cycling, filtering, sorting, editing, details, submit and select actions.
 - Sort ordering, the selection that follows a sorted or filtered task, and the status change under a status sort.
+- Identifier validation, including zero rejection, invalid persisted identifiers and the row index clamp.
 - Category editing, category deletion with its tasks, and the editable create and pre-filled edit form prompts.
 - Data file path propagation through `withDataFile`.
 
-The current suite has 46 tests.
+The current suite has 48 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 

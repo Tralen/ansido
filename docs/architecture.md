@@ -50,7 +50,7 @@ The drawing state from Ansiform is threaded through the loop in `LoopState`. Eve
 
 ## Immutability
 
-All bindings and fields are immutable. Transitions use record updates that produce new values. The `Workspace` constructor is hidden by the module export list, so the only way to build one outside `Ansido.Domain` is through `mkWorkspace` or the transitions. Lists are treated as persistent values; nothing is modified in place.
+All bindings and fields are immutable. Transitions use record updates that produce new values. The `Workspace` constructor is hidden by the module export list, so the only way to build one outside `Ansido.Domain` is through `mkWorkspace` or the transitions. The entity constructors are hidden as well: `mkCategoryId`, `mkTaskId`, `mkCategory` and `mkTask` are the public constructors. Lists are treated as persistent values; nothing is modified in place.
 
 ## Errors as data
 
@@ -79,6 +79,6 @@ The feedback is positive overall: the library provided the groups, tables, rules
 
 ## Selection model
 
-`UiState` stores the selected screen, category, status filter, sort order and row; `AppState` also stores the data file path shown on the help screen. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the filtered and sorted task list. On the category screen, `uiCategory` is both the highlight and the category acted on by `e` and `Del`; `MoveCategory` walks the category list and resets the row. The board renders a window of ten tasks, keeping the selected row visible and marking hidden rows with an ellipsis row. The details and edit screens resolve the selected task from `DetailsScreen TaskId` and `EditTaskScreen TaskId` instead of the row. The category edit screen resolves the category from `uiCategory`.
+`UiState` stores the selected screen, category, status filter, sort order and row; `AppState` also stores the data file path shown on the help screen. `RowIndex` is a `Natural` built through `mkRowIndex`, which clamps a negative `Int` to zero. `clampAppState` restores the invariants after any change: the selected category must exist, and the row must point inside the filtered and sorted task list. On the category screen, `uiCategory` is both the highlight and the category acted on by `e` and `Del`; `MoveCategory` walks the category list and resets the row. The board renders a window of ten tasks, keeping the selected row visible and marking hidden rows with an ellipsis row. The details and edit screens resolve the selected task from `DetailsScreen TaskId` and `EditTaskScreen TaskId` instead of the row. The category edit screen resolves the category from `uiCategory`.
 
 The filter is a `Filter` value with `ShowAll` and `OnlyStatus Status`. The sort is a `Sort` value with `SortOriginal`, `SortByStatus` and `SortByTitle`. `visibleTasks` applies the filter and then the sort, so the table, selection, windowing and clamping all use the same ordered list. Creating a task resets the filter to `ShowAll`; editing keeps it. The update keeps the selected task selected across a filter, a sort, a status change or an edit whenever the task remains visible, and clamps the row otherwise.

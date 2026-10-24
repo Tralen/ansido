@@ -114,7 +114,7 @@ selectCategory identifier app
                         (appUi app)
                             { uiScreen = BoardScreen
                             , uiCategory = Just identifier
-                            , uiRow = RowIndex 0
+                            , uiRow = mkRowIndex 0
                             , uiNotice = Nothing
                             }
                     }
@@ -150,21 +150,21 @@ cycleSort app =
 keepSelection :: Maybe TaskId -> AppState -> AppState
 keepSelection identifier app =
     let clamped = clampAppState app
-        current = rowIndexValue (uiRow (appUi clamped))
+        current = fromIntegral (rowIndexValue (uiRow (appUi clamped)))
         position =
             case identifier >>= \wanted -> findIndex ((== wanted) . taskId) (visibleTasks clamped) of
                 Just index -> index
                 Nothing -> current
-     in clamped{appUi = (appUi clamped){uiRow = RowIndex position}}
+     in clamped{appUi = (appUi clamped){uiRow = mkRowIndex position}}
 
 moveRow :: Direction -> AppState -> AppState
 moveRow direction app =
-    let current = rowIndexValue (uiRow (appUi app))
+    let current = fromIntegral (rowIndexValue (uiRow (appUi app)))
         limit = max 0 (length (visibleTasks app) - 1)
         next = case direction of
             Previous -> max 0 (current - 1)
             Next -> min limit (current + 1)
-     in app{appUi = (appUi app){uiRow = RowIndex next}}
+     in app{appUi = (appUi app){uiRow = mkRowIndex next}}
 
 -- | Moves the highlighted category without leaving the category screen.
 moveCategory :: Direction -> AppState -> AppState
@@ -173,7 +173,7 @@ moveCategory direction app =
         { appUi =
             (appUi app)
                 { uiCategory = fmap categoryId (indexMaybe next categories)
-                , uiRow = RowIndex 0
+                , uiRow = mkRowIndex 0
                 , uiNotice = Nothing
                 }
         }
@@ -315,7 +315,7 @@ submitCategory rawName app = do
                 (appUi app)
                     { uiScreen = CategoryScreen
                     , uiCategory = Just (categoryId category)
-                    , uiRow = RowIndex 0
+                    , uiRow = mkRowIndex 0
                     , uiNotice = Just notice
                     }
             }
@@ -344,7 +344,7 @@ submitCategoryEdit identifier rawName app =
                             (appUi app)
                                 { uiScreen = CategoryScreen
                                 , uiCategory = Just identifier
-                                , uiRow = RowIndex 0
+                                , uiRow = mkRowIndex 0
                                 , uiNotice = Just notice
                                 }
                         }
@@ -372,7 +372,7 @@ deleteSelectedCategory app =
                         , appUi =
                             (appUi app)
                                 { uiScreen = CategoryScreen
-                                , uiRow = RowIndex 0
+                                , uiRow = mkRowIndex 0
                                 , uiNotice = Just notice
                                 }
                         }
@@ -397,10 +397,13 @@ clampUiState workspace ui =
                     (uiFilter ui)
                     (categoryTasks categoryIdentifier workspace)
         limit = max 0 (length tasks - 1)
-        position = min (max 0 (rowIndexValue (uiRow ui))) limit
+        position =
+            min
+                (max 0 (fromIntegral (rowIndexValue (uiRow ui))))
+                limit
      in ui
             { uiCategory = identifier
-            , uiRow = RowIndex position
+            , uiRow = mkRowIndex position
             }
 
 validCategory :: Workspace -> Maybe CategoryId -> Maybe CategoryId

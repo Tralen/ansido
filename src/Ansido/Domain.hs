@@ -4,16 +4,28 @@
 -- report failures as data through 'DomainError'.
 module Ansido.Domain
     ( -- * Identifiers and text.
-      CategoryId (..)
-    , CategoryName (..)
-    , TaskId (..)
-    , TaskTitle (..)
-    , TaskContent (..)
+      CategoryId
+    , categoryIdValue
+    , CategoryName
+    , categoryNameText
+    , TaskId
+    , taskIdValue
+    , TaskTitle
+    , taskTitleText
+    , TaskContent
+    , taskContentText
 
       -- * Entities.
-    , Category (..)
+    , Category
+    , categoryId
+    , categoryName
     , Status (..)
-    , Task (..)
+    , Task
+    , taskId
+    , taskTitle
+    , taskContent
+    , taskStatus
+    , taskCategory
     , Workspace
 
       -- * Errors.
@@ -22,6 +34,10 @@ module Ansido.Domain
 
       -- * Construction.
     , emptyWorkspace
+    , mkCategoryId
+    , mkTaskId
+    , mkCategory
+    , mkTask
     , mkCategoryName
     , mkTaskTitle
     , mkTaskContent
@@ -56,20 +72,21 @@ module Ansido.Domain
 import Data.Char (isControl, isSpace)
 import Data.List (dropWhileEnd, find, nub, sort)
 import Data.Maybe (listToMaybe)
+import Numeric.Natural (Natural)
 
 -- Identifiers.
 --------------------------------------------------------------------------------
 
--- | Stable identifier of a category.
-newtype CategoryId = CategoryId {categoryIdValue :: Int}
+-- | Stable identifier of a category. Zero is not a valid identifier.
+newtype CategoryId = CategoryId {categoryIdValue :: Natural}
     deriving (Eq, Ord, Show)
 
 -- | Validated name of a category.
 newtype CategoryName = CategoryName {categoryNameText :: String}
     deriving (Eq, Ord, Show)
 
--- | Stable identifier of a task.
-newtype TaskId = TaskId {taskIdValue :: Int}
+-- | Stable identifier of a task. Zero is not a valid identifier.
+newtype TaskId = TaskId {taskIdValue :: Natural}
     deriving (Eq, Ord, Show)
 
 -- | Validated title of a task.
@@ -141,6 +158,32 @@ nextStatus Doing = Done
 nextStatus Done = Todo
 
 --------------------------------------------------------------------------------
+
+-- | Builds a category identifier, rejecting zero.
+mkCategoryId :: Natural -> Either DomainError CategoryId
+mkCategoryId raw
+    | raw == 0 = Left InvalidCategoryId
+    | otherwise = Right (CategoryId raw)
+
+-- | Builds a task identifier, rejecting zero.
+mkTaskId :: Natural -> Either DomainError TaskId
+mkTaskId raw
+    | raw == 0 = Left InvalidTaskId
+    | otherwise = Right (TaskId raw)
+
+-- | Builds a category from validated parts.
+mkCategory :: CategoryId -> CategoryName -> Category
+mkCategory = Category
+
+-- | Builds a task from validated parts.
+mkTask ::
+    TaskId ->
+    TaskTitle ->
+    TaskContent ->
+    Status ->
+    CategoryId ->
+    Task
+mkTask = Task
 
 -- | A workspace with no categories and no tasks.
 emptyWorkspace :: Workspace
@@ -386,7 +429,7 @@ nextTaskId :: Workspace -> TaskId
 nextTaskId workspace =
     TaskId (nextIdentifier (taskIdValue . taskId) (workspaceTasks workspace))
 
-nextIdentifier :: (a -> Int) -> [a] -> Int
+nextIdentifier :: (a -> Natural) -> [a] -> Natural
 nextIdentifier get values = 1 + foldr (max . get) 0 values
 
 --------------------------------------------------------------------------------
@@ -399,6 +442,8 @@ data DomainError
     | TaskTitleTooLong Int
     | TaskContentTooLong Int
     | ControlCharacterInText
+    | InvalidCategoryId
+    | InvalidTaskId
     | UnknownCategory CategoryId
     | UnknownTask TaskId
     | DuplicateCategoryId
@@ -421,6 +466,10 @@ domainErrorMessage err =
             "The task note must have at most " <> show limit <> " characters."
         ControlCharacterInText ->
             "The text cannot contain control characters."
+        InvalidCategoryId ->
+            "The category identifier must be positive."
+        InvalidTaskId ->
+            "The task identifier must be positive."
         UnknownCategory identifier ->
             "Unknown category: " <> show (categoryIdValue identifier) <> "."
         UnknownTask identifier ->

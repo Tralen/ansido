@@ -6,9 +6,9 @@ The domain module defines the vocabulary of the application and the only legal t
 
 | Type | Purpose |
 | --- | --- |
-| `CategoryId` | Newtype over `Int`, stable identifier of a category. |
+| `CategoryId` | Newtype over positive `Natural`, stable identifier of a category. |
 | `CategoryName` | Newtype over `String`, validated category name. |
-| `TaskId` | Newtype over `Int`, stable identifier of a task. |
+| `TaskId` | Newtype over positive `Natural`, stable identifier of a task. |
 | `TaskTitle` | Newtype over `String`, validated task title. |
 | `TaskContent` | Newtype over `String`, validated task note. It may be empty. |
 | `Category` | Identifier and validated name. |
@@ -17,6 +17,8 @@ The domain module defines the vocabulary of the application and the only legal t
 | `Workspace` | Ordered categories and ordered tasks. |
 
 `Workspace` hides its constructor. Values are built by `mkWorkspace`, `emptyWorkspace`, `addCategory`, `editCategory`, `deleteCategory`, `addTask`, `moveTask`, `advanceTask`, `editTask` and `deleteTask`.
+
+The constructors of `CategoryId`, `TaskId`, `Category`, `Task`, `CategoryName`, `TaskTitle` and `TaskContent` are hidden. `mkCategoryId` and `mkTaskId` reject zero, `mkCategoryName`, `mkTaskTitle` and `mkTaskContent` validate the text, and `mkCategory` and `mkTask` build an entity only from already validated parts. `Status (..)` stays public because it is a closed enumeration.
 
 ## Validation
 
@@ -56,7 +58,7 @@ All transitions return `Either DomainError a`. None of them throw. Deleting a ca
 
 ## Identifiers
 
-Identifiers are allocated from the current maximum plus one. Deleting the newest task or category can therefore free its identifier for reuse, which is acceptable because the application has no external references to identifiers.
+Identifiers are positive `Natural` values. `mkCategoryId` and `mkTaskId` reject zero, and the internal allocators take the current maximum plus one. Deleting the newest task or category can therefore free its identifier for reuse, which is acceptable because the application has no external references to identifiers.
 
 ## Status cycle
 
@@ -70,4 +72,4 @@ Status labels are displayed in title case as `Todo`, `Doing` and `Done`, while t
 
 ## Errors
 
-`DomainError` is a closed algebraic data type. `domainErrorMessage` is the only place where a domain failure becomes text, which keeps messages consistent across the board, notices and the persistence parser.
+`DomainError` is a closed algebraic data type. `InvalidCategoryId` and `InvalidTaskId` report a zero identifier, while the other constructors cover text validation, unknown entities and workspace invariants. `domainErrorMessage` is the only place where a domain failure becomes text, which keeps messages consistent across the board, notices and the persistence parser.

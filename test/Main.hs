@@ -2,6 +2,7 @@
 module Main (main) where
 
 --------------------------------------------------------------------------------
+import Numeric.Natural (Natural)
 import System.Exit (exitFailure)
 
 import Ansiform
@@ -84,6 +85,12 @@ fixtureWorkspace = snd <$> buildFixture
 fixtureCategory :: Either String Category
 fixtureCategory = fst <$> buildFixture
 
+mustCategoryId :: Natural -> Either String CategoryId
+mustCategoryId = rightOr . mkCategoryId
+
+mustTaskId :: Natural -> Either String TaskId
+mustTaskId = rightOr . mkTaskId
+
 -- | Two tasks whose status and title orders differ.
 sortFixture :: Either String (Category, Workspace)
 sortFixture = do
@@ -118,10 +125,12 @@ tests =
     , testDeleteSelectedCategory
     , testDuplicateCategory
     , testWorkspaceInvariants
+    , testIdentifierValidation
     , testEncodeDecode
     , testDecodeEmpty
     , testDecodeBadHeader
     , testDecodeBadStatus
+    , testDecodeInvalidId
     , testDecodeVersion1
     , testDecodeCrlf
     , testWindowStart
@@ -209,11 +218,12 @@ testAddTaskUnknownCategory =
     ( "add task to unknown category"
     , do
         workspace <- fixtureWorkspace
+        unknownCategory <- mustCategoryId 99
         title <- rightOr (mkTaskTitle "Review")
         content <- rightOr (mkTaskContent "Note")
         check
             "unknown category accepted"
-            (isLeft (addTask (CategoryId 99) title content workspace))
+            (isLeft (addTask unknownCategory title content workspace))
     )
 
 testMoveTask :: (String, Check)
@@ -221,9 +231,11 @@ testMoveTask =
     ( "move task"
     , do
         workspace <- fixtureWorkspace
-        updated <- rightOr (moveTask (TaskId 1) Doing workspace)
-        checkEqual "first task moved" (Just Doing) (taskStatus <$> findTask (TaskId 1) updated)
-        checkEqual "second task untouched" (Just Todo) (taskStatus <$> findTask (TaskId 2) updated)
+        task1 <- mustTaskId 1
+        task2 <- mustTaskId 2
+        updated <- rightOr (moveTask task1 Doing workspace)
+        checkEqual "first task moved" (Just Doing) (taskStatus <$> findTask task1 updated)
+        checkEqual "second task untouched" (Just Todo) (taskStatus <$> findTask task2 updated)
     )
 
 testAdvanceTaskCycle :: (String, Check)
@@ -231,12 +243,13 @@ testAdvanceTaskCycle =
     ( "advance task cycle"
     , do
         workspace <- fixtureWorkspace
-        once <- rightOr (advanceTask (TaskId 1) workspace)
-        twice <- rightOr (advanceTask (TaskId 1) once)
-        thrice <- rightOr (advanceTask (TaskId 1) twice)
-        checkEqual "todo to doing" (Just Doing) (taskStatus <$> findTask (TaskId 1) once)
-        checkEqual "doing to done" (Just Done) (taskStatus <$> findTask (TaskId 1) twice)
-        checkEqual "done to todo" (Just Todo) (taskStatus <$> findTask (TaskId 1) thrice)
+        task1 <- mustTaskId 1
+        once <- rightOr (advanceTask task1 workspace)
+        twice <- rightOr (advanceTask task1 once)
+        thrice <- rightOr (advanceTask task1 twice)
+        checkEqual "todo to doing" (Just Doing) (taskStatus <$> findTask task1 once)
+        checkEqual "doing to done" (Just Done) (taskStatus <$> findTask task1 twice)
+        checkEqual "done to todo" (Just Todo) (taskStatus <$> findTask task1 thrice)
     )
 
 testDeleteTask :: (String, Check)
@@ -244,9 +257,11 @@ testDeleteTask =
     ( "delete task"
     , do
         workspace <- fixtureWorkspace
-        updated <- rightOr (deleteTask (TaskId 1) workspace)
-        checkEqual "task removed" Nothing (findTask (TaskId 1) updated)
-        checkEqual "other task kept" (Just (TaskId 2)) (taskId <$> findTask (TaskId 2) updated)
+        task1 <- mustTaskId 1
+        task2 <- mustTaskId 2
+        updated <- rightOr (deleteTask task1 workspace)
+        checkEqual "task removed" Nothing (findTask task1 updated)
+        checkEqual "other task kept" (Just task2) (taskId <$> findTask task2 updated)
     )
 
 testEditCategory :: (String, Check)
@@ -278,9 +293,10 @@ testEditCategory =
         check
             "duplicate name accepted"
             (isLeft (editCategory (categoryId category) name twoCategories))
+        unknownCategory <- mustCategoryId 99
         check
             "unknown category"
-            (isLeft (editCategory (CategoryId 99) name workspace))
+            (isLeft (editCategory unknownCategory name workspace))
     )
 
 testDeleteCategory :: (String, Check)
@@ -304,9 +320,10 @@ testDeleteCategory =
             "own tasks removed"
             [taskId keptTask]
             (map taskId (workspaceTasks updated))
+        unknownCategory <- mustCategoryId 99
         check
             "unknown category"
-            (isLeft (deleteCategory (CategoryId 99) withOtherTask))
+            (isLeft (deleteCategory unknownCategory withOtherTask))
     )
 
 testSubmitCategoryEdit :: (String, Check)
@@ -378,20 +395,32 @@ testWorkspaceInvariants =
     , do
         category <- fixtureCategory
         workspace <- fixtureWorkspace
-        let categoryDuplicate = Category (categoryId category) (categoryName category)
-            task =
-                Task
-                    (TaskId 1)
-                    (TaskTitle "x")
-                    (TaskContent "")
-                    Todo
-                    (CategoryId 99)
+        taskIdentifier <- mustTaskId 1
+        unknownCategory <- mustCategoryId 99
+        title <- rightOr (mkTaskTitle "x")
+        content <- rightOr (mkTaskContent "")
+        let categoryDuplicate = mkCategory (categoryId category) (categoryName category)
+            task = mkTask taskIdentifier title content Todo unknownCategory
         check
             "duplicate category id accepted"
             (isLeft (mkWorkspace [category, categoryDuplicate] (workspaceTasks workspace)))
         check
             "unknown category accepted"
             (isLeft (mkWorkspace [category] [task]))
+    )
+
+testIdentifierValidation :: (String, Check)
+testIdentifierValidation =
+    ( "identifier validation"
+    , do
+        check "zero category id rejected" (isLeft (mkCategoryId 0))
+        check "zero task id rejected" (isLeft (mkTaskId 0))
+        categoryIdentifier <- mustCategoryId 1
+        taskIdentifier <- mustTaskId 1
+        checkEqual "category id" 1 (categoryIdValue categoryIdentifier)
+        checkEqual "task id" 1 (taskIdValue taskIdentifier)
+        checkEqual "negative row clamped" 0 (rowIndexValue (mkRowIndex (-1)))
+        checkEqual "positive row kept" 2 (rowIndexValue (mkRowIndex 2))
     )
 
 testEncodeDecode :: (String, Check)
@@ -422,14 +451,34 @@ testDecodeBadStatus =
         (isLeft (decodeWorkspace "ansido\t1\ntask\t1\t1\tlater\tTitle\n"))
     )
 
+testDecodeInvalidId :: (String, Check)
+testDecodeInvalidId =
+    ( "decode invalid identifiers"
+    , do
+        check
+            "zero category id"
+            (isLeft (decodeWorkspace "ansido\t2\ncategory\t0\tWork\n"))
+        check
+            "negative category id"
+            (isLeft (decodeWorkspace "ansido\t2\ncategory\t-1\tWork\n"))
+        check
+            "zero task id"
+            ( isLeft
+                ( decodeWorkspace
+                    "ansido\t2\ncategory\t1\tWork\ntask\t0\t1\ttodo\tTitle\t\n"
+                )
+            )
+    )
+
 testDecodeVersion1 :: (String, Check)
 testDecodeVersion1 =
     ( "decode version 1"
     , case decodeWorkspace
         "ansido\t1\ncategory\t1\tWork\ntask\t1\t1\ttodo\tLegacy\n" of
         Left err -> Left (show err)
-        Right workspace ->
-            case findTask (TaskId 1) workspace of
+        Right workspace -> do
+            task1 <- mustTaskId 1
+            case findTask task1 workspace of
                 Nothing -> Left "task missing"
                 Just task ->
                     checkEqual
@@ -517,10 +566,11 @@ testCycleStatus =
                     (initialAppState workspace)
                 )
         forward <- rightOr (update CycleSelected board)
+        task1 <- mustTaskId 1
         checkEqual
             "forward"
             (Just Doing)
-            (taskStatus <$> findTask (TaskId 1) (appWorkspace forward))
+            (taskStatus <$> findTask task1 (appWorkspace forward))
     )
 
 testFilter :: (String, Check)
@@ -565,6 +615,8 @@ testSortOrder =
         sorted <- rightOr sortFixture
         let category = fst sorted
             workspace = snd sorted
+        task1 <- mustTaskId 1
+        task2 <- mustTaskId 2
         board <-
             rightOr
                 ( update
@@ -573,28 +625,28 @@ testSortOrder =
                 )
         checkEqual
             "original order"
-            [TaskId 1, TaskId 2]
+            [task1, task2]
             (map taskId (visibleTasks board))
         byStatus <- rightOr (update CycleSort board)
         checkEqual "status sort" SortByStatus (uiSort (appUi byStatus))
         checkEqual "status label" "status" (sortLabel (uiSort (appUi byStatus)))
         checkEqual
             "status order"
-            [TaskId 2, TaskId 1]
+            [task2, task1]
             (map taskId (visibleTasks byStatus))
         byTitle <- rightOr (update CycleSort byStatus)
         checkEqual "title sort" SortByTitle (uiSort (appUi byTitle))
         checkEqual "title label" "title" (sortLabel (uiSort (appUi byTitle)))
         checkEqual
             "title order"
-            [TaskId 1, TaskId 2]
+            [task1, task2]
             (map taskId (visibleTasks byTitle))
         backToOriginal <- rightOr (update CycleSort byTitle)
         checkEqual "original again" SortOriginal (uiSort (appUi backToOriginal))
         checkEqual "original label" "original" (sortLabel (uiSort (appUi backToOriginal)))
         checkEqual
             "original order again"
-            [TaskId 1, TaskId 2]
+            [task1, task2]
             (map taskId (visibleTasks backToOriginal))
     )
 
@@ -605,18 +657,19 @@ testSortKeepsSelection =
         sorted <- rightOr sortFixture
         let category = fst sorted
             workspace = snd sorted
+        task1 <- mustTaskId 1
         board <-
             rightOr
                 ( update
                     (SelectCategory (categoryId category))
                     (initialAppState workspace)
                 )
-        checkEqual "initial selection" (Just (TaskId 1)) (selectedTaskId board)
+        checkEqual "initial selection" (Just task1) (selectedTaskId board)
         byStatus <- rightOr (update CycleSort board)
-        checkEqual "selection kept after sort" (Just (TaskId 1)) (selectedTaskId byStatus)
+        checkEqual "selection kept after sort" (Just task1) (selectedTaskId byStatus)
         checkEqual "row follows the task" 1 (rowIndexValue (uiRow (appUi byStatus)))
         byTitle <- rightOr (update CycleSort byStatus)
-        checkEqual "selection kept after title sort" (Just (TaskId 1)) (selectedTaskId byTitle)
+        checkEqual "selection kept after title sort" (Just task1) (selectedTaskId byTitle)
         checkEqual "row follows the title" 0 (rowIndexValue (uiRow (appUi byTitle)))
     )
 
@@ -626,6 +679,9 @@ testStatusSortKeepsSelection =
     , do
         category <- fixtureCategory
         workspace <- fixtureWorkspace
+        task1 <- mustTaskId 1
+        task2 <- mustTaskId 2
+        task3 <- mustTaskId 3
         title <- rightOr (mkTaskTitle "Gamma")
         content <- rightOr (mkTaskContent "")
         (thirdTask, withThird) <-
@@ -640,14 +696,14 @@ testStatusSortKeepsSelection =
         byStatus <- rightOr (update CycleSort board)
         checkEqual
             "status order before the change"
-            [TaskId 1, TaskId 2, TaskId 3]
+            [task1, task2, task3]
             (map taskId (visibleTasks byStatus))
         changed <- rightOr (update CycleSelected byStatus)
         checkEqual
             "status order after the change"
-            [TaskId 2, TaskId 1, TaskId 3]
+            [task2, task1, task3]
             (map taskId (visibleTasks changed))
-        checkEqual "selection follows the status" (Just (TaskId 1)) (selectedTaskId changed)
+        checkEqual "selection follows the status" (Just task1) (selectedTaskId changed)
         checkEqual "row follows the status" 1 (rowIndexValue (uiRow (appUi changed)))
     )
 
@@ -656,20 +712,22 @@ testEditTask =
     ( "edit task"
     , do
         workspace <- fixtureWorkspace
+        task1 <- mustTaskId 1
+        unknownTask <- mustTaskId 99
         title <- rightOr (mkTaskTitle "Edited title")
         content <- rightOr (mkTaskContent "Edited note")
-        updated <- rightOr (editTask (TaskId 1) title content workspace)
+        updated <- rightOr (editTask task1 title content workspace)
         checkEqual
             "title"
             (Just "Edited title")
-            (taskTitleText . taskTitle <$> findTask (TaskId 1) updated)
+            (taskTitleText . taskTitle <$> findTask task1 updated)
         checkEqual
             "content"
             (Just "Edited note")
-            (taskContentText . taskContent <$> findTask (TaskId 1) updated)
+            (taskContentText . taskContent <$> findTask task1 updated)
         check
             "unknown task"
-            (isLeft (editTask (TaskId 99) title content workspace))
+            (isLeft (editTask unknownTask title content workspace))
     )
 
 testEditValues :: (String, Check)
@@ -678,29 +736,30 @@ testEditValues =
     , do
         category <- fixtureCategory
         workspace <- fixtureWorkspace
+        task1 <- mustTaskId 1
         board <-
             rightOr
                 ( update
                     (SelectCategory (categoryId category))
                     (initialAppState workspace)
                 )
-        changed <- rightOr (update (SubmitEdit (TaskId 1) "New" "New note") board)
+        changed <- rightOr (update (SubmitEdit task1 "New" "New note") board)
         checkEqual
             "title changed"
             (Just "New")
-            (taskTitleText . taskTitle <$> findTask (TaskId 1) (appWorkspace changed))
+            (taskTitleText . taskTitle <$> findTask task1 (appWorkspace changed))
         checkEqual
             "content changed"
             (Just "New note")
-            (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace changed))
-        cleared <- rightOr (update (SubmitEdit (TaskId 1) "New" "") board)
+            (taskContentText . taskContent <$> findTask task1 (appWorkspace changed))
+        cleared <- rightOr (update (SubmitEdit task1 "New" "") board)
         checkEqual
             "note cleared"
             (Just "")
-            (taskContentText . taskContent <$> findTask (TaskId 1) (appWorkspace cleared))
+            (taskContentText . taskContent <$> findTask task1 (appWorkspace cleared))
         check
             "empty title rejected"
-            (isLeft (update (SubmitEdit (TaskId 1) "" "Note") board))
+            (isLeft (update (SubmitEdit task1 "" "Note") board))
     )
 
 testMoveRow :: (String, Check)
@@ -721,25 +780,27 @@ testMoveCategory =
         workspace <- fixtureWorkspace
         name <- rightOr (mkCategoryName "Personal")
         (_, twoCategories) <- rightOr (addCategory name workspace)
+        category1 <- mustCategoryId 1
+        category2 <- mustCategoryId 2
         let app = initialAppState twoCategories
         next <- rightOr (update (MoveCategory Next) app)
-        checkEqual "next category" (Just (CategoryId 2)) (uiCategory (appUi next))
+        checkEqual "next category" (Just category2) (uiCategory (appUi next))
         checkEqual "category screen kept" CategoryScreen (uiScreen (appUi next))
         checkEqual "row reset" 0 (rowIndexValue (uiRow (appUi next)))
         clamped <- rightOr (update (MoveCategory Next) next)
         checkEqual
             "last category clamped"
-            (Just (CategoryId 2))
+            (Just category2)
             (uiCategory (appUi clamped))
         previous <- rightOr (update (MoveCategory Previous) clamped)
         checkEqual
             "previous category"
-            (Just (CategoryId 1))
+            (Just category1)
             (uiCategory (appUi previous))
         first <- rightOr (update (MoveCategory Previous) previous)
         checkEqual
             "first category clamped"
-            (Just (CategoryId 1))
+            (Just category1)
             (uiCategory (appUi first))
         empty <- rightOr (update (MoveCategory Next) (initialAppState emptyWorkspace))
         checkEqual
@@ -779,9 +840,10 @@ testSubmitCategory =
     , do
         workspace <- fixtureWorkspace
         app <- rightOr (update (SubmitCategory "Personal") (initialAppState workspace))
+        category2 <- mustCategoryId 2
         checkEqual "category count" 2 (length (workspaceCategories (appWorkspace app)))
         checkEqual "category screen" CategoryScreen (uiScreen (appUi app))
-        checkEqual "new category selected" (Just (CategoryId 2)) (uiCategory (appUi app))
+        checkEqual "new category selected" (Just category2) (uiCategory (appUi app))
     )
 
 testSelectUnknownCategory :: (String, Check)
@@ -789,9 +851,10 @@ testSelectUnknownCategory =
     ( "select unknown category"
     , do
         workspace <- fixtureWorkspace
+        unknownCategory <- mustCategoryId 99
         check
             "unknown category accepted"
-            (isLeft (update (SelectCategory (CategoryId 99)) (initialAppState workspace)))
+            (isLeft (update (SelectCategory unknownCategory) (initialAppState workspace)))
     )
 
 testAddTaskWithoutCategory :: (String, Check)
@@ -813,9 +876,10 @@ testOpenDetails =
         let app = withDataFile "board.tsv" (initialAppState workspace)
         board <- rightOr (update (SelectCategory (categoryId category)) app)
         details <- rightOr (update OpenDetails board)
+        task1 <- mustTaskId 1
         checkEqual
             "details screen"
-            (DetailsScreen (TaskId 1))
+            (DetailsScreen task1)
             (uiScreen (appUi details))
         checkEqual "data file" "board.tsv" (appDataFile details)
     )
@@ -909,6 +973,7 @@ testArrowKeys :: (String, Check)
 testArrowKeys =
     ( "arrow keys"
     , do
+        task1 <- mustTaskId 1
         checkEqual
             "up"
             (Just (MoveRowCommand Previous))
@@ -960,7 +1025,7 @@ testArrowKeys =
         checkEqual
             "details v goes back"
             (Just BackCommand)
-            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'v'))
+            (commandForKey (DetailsScreen task1) (KeyCharacter 'v'))
         checkEqual
             "board v opens details"
             (Just DetailsCommand)
@@ -968,41 +1033,44 @@ testArrowKeys =
         checkEqual
             "details e edits"
             (Just EditTaskCommand)
-            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'e'))
+            (commandForKey (DetailsScreen task1) (KeyCharacter 'e'))
         checkEqual
             "details f is free"
             Nothing
-            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'f'))
+            (commandForKey (DetailsScreen task1) (KeyCharacter 'f'))
         checkEqual
             "details o is free"
             Nothing
-            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'o'))
+            (commandForKey (DetailsScreen task1) (KeyCharacter 'o'))
     )
 
 testBackActions :: (String, Check)
 testBackActions =
     ( "back actions"
     , do
+        task1 <- mustTaskId 1
+        category1 <- mustCategoryId 1
         checkEqual "board back" OpenCategories (backAction BoardScreen)
         checkEqual
             "details back"
             OpenBoard
-            (backAction (DetailsScreen (TaskId 1)))
+            (backAction (DetailsScreen task1))
         checkEqual
             "edit back"
             OpenBoard
-            (backAction (EditTaskScreen (TaskId 1)))
+            (backAction (EditTaskScreen task1))
         checkEqual "category back" OpenBoard (backAction CategoryScreen)
         checkEqual
             "edit category back"
             OpenCategories
-            (backAction (EditCategoryScreen (CategoryId 1)))
+            (backAction (EditCategoryScreen category1))
     )
 
 testDeleteKey :: (String, Check)
 testDeleteKey =
     ( "delete key"
     , do
+        task1 <- mustTaskId 1
         checkEqual
             "board delete"
             (Just DeleteCommand)
@@ -1010,7 +1078,7 @@ testDeleteKey =
         checkEqual
             "details delete"
             (Just DeleteCommand)
-            (commandForKey (DetailsScreen (TaskId 1)) KeyDelete)
+            (commandForKey (DetailsScreen task1) KeyDelete)
         checkEqual
             "d is not delete"
             Nothing
@@ -1039,6 +1107,7 @@ testCategoryKeys :: (String, Check)
 testCategoryKeys =
     ( "category keys"
     , do
+        category1 <- mustCategoryId 1
         checkEqual
             "n creates"
             (Just AddCategoryCommand)
@@ -1078,11 +1147,11 @@ testCategoryKeys =
         checkEqual
             "edit form ignores e"
             Nothing
-            (commandForKey (EditCategoryScreen (CategoryId 1)) (KeyCharacter 'e'))
+            (commandForKey (EditCategoryScreen category1) (KeyCharacter 'e'))
         checkEqual
             "edit form confirms with enter"
             Nothing
-            (commandForKey (EditCategoryScreen (CategoryId 1)) KeyEnter)
+            (commandForKey (EditCategoryScreen category1) KeyEnter)
     )
 
 -- Main.

@@ -3,7 +3,9 @@ module Ansido.App.State
     ( Screen (..)
     , Filter (..)
     , Sort (..)
-    , RowIndex (..)
+    , RowIndex
+    , rowIndexValue
+    , mkRowIndex
     , UiState (..)
     , AppState (..)
     , Direction (..)
@@ -27,6 +29,7 @@ module Ansido.App.State
 import Data.Char (toLower)
 import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
+import Numeric.Natural (Natural)
 
 import Ansido.Domain
 import Ansido.Ui.Components (Notice)
@@ -44,8 +47,12 @@ data Screen
     deriving (Eq, Show)
 
 -- | Zero based position inside the task table.
-newtype RowIndex = RowIndex {rowIndexValue :: Int}
+newtype RowIndex = RowIndex {rowIndexValue :: Natural}
     deriving (Eq, Ord, Show)
+
+-- | Builds a row index, clamping negative values to zero.
+mkRowIndex :: Int -> RowIndex
+mkRowIndex raw = RowIndex (fromIntegral (max 0 raw))
 
 -- | Which statuses the table shows. 'ShowAll' disables the filter.
 data Filter = ShowAll | OnlyStatus Status
@@ -126,7 +133,7 @@ initialUiState workspace =
         , uiCategory = fmap categoryId (listToMaybe (workspaceCategories workspace))
         , uiFilter = ShowAll
         , uiSort = SortOriginal
-        , uiRow = RowIndex 0
+        , uiRow = mkRowIndex 0
         , uiNotice = Nothing
         }
 
@@ -196,7 +203,7 @@ selectedTaskId app =
         _ ->
             taskId
                 <$> indexMaybe
-                    (rowIndexValue (uiRow (appUi app)))
+                    (fromIntegral (rowIndexValue (uiRow (appUi app))))
                     (visibleTasks app)
 
 -- | Task under the cursor, when it still exists.

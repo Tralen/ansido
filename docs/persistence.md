@@ -34,7 +34,7 @@ Task record:
 task	<id>	<category id>	<status>	<title>	<note>
 ```
 
-`<status>` is one of `todo`, `doing` or `done`. Status labels shown on screen are title case, but the file always uses the stable lowercase keys. `<note>` may be empty; the field is still written, so the line ends with a tab when the note is empty.
+`<status>` is one of `todo`, `doing` or `done`. Status labels shown on screen are title case, but the file always uses the stable lowercase keys. `<note>` may be empty; the field is still written, so the line ends with a tab when the note is empty. Identifiers are positive integers.
 
 Example:
 
@@ -50,7 +50,7 @@ task	4	2	todo	Buy coffee	Personal errand.
 
 ## Parsing
 
-`decodeWorkspace` is pure and returns `Either PersistenceError Workspace`. It checks the header, parses identifiers with `reads` so malformed input cannot crash, parses status keys, validates names, titles and notes through the domain smart constructors and finally calls `mkWorkspace` to enforce referential integrity. Carriage returns are removed before splitting the lines, so files written or copied on Windows parse the same way on every platform.
+`decodeWorkspace` is pure and returns `Either PersistenceError Workspace`. It checks the header, parses identifiers with `readMaybe` as positive `Natural` values, parses status keys, validates names, titles and notes through the domain smart constructors and finally calls `mkWorkspace` to enforce referential integrity. Carriage returns are removed before splitting the lines, so files written or copied on Windows parse the same way on every platform.
 
 Version 1 files are still accepted. A version 1 task has no note field, so its note becomes empty. Version 2 files require the note field, even when it is empty.
 

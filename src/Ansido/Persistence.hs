@@ -16,6 +16,7 @@ module Ansido.Persistence
 --------------------------------------------------------------------------------
 import Control.Exception (IOException, evaluate, try)
 import Data.Maybe (catMaybes)
+import Numeric.Natural (Natural)
 import System.Directory
     ( createDirectoryIfMissing
     , doesFileExist
@@ -34,6 +35,7 @@ import System.IO
     , utf8
     , withFile
     )
+import Text.Read (readMaybe)
 
 import Ansido.Domain
 
@@ -149,7 +151,7 @@ decodeLine version lineNumber line =
         (_, ["category", idText, nameText]) -> do
             identifier <- parseCategoryId lineNumber idText
             name <- parseCategoryName lineNumber nameText
-            Right (Left (Category identifier name))
+            Right (Left (mkCategory identifier name))
         (1, ["task", idText, categoryText, statusText, titleText]) ->
             decodeTask lineNumber idText categoryText statusText titleText ""
         (2, ["task", idText, categoryText, statusText, titleText, contentText]) ->
@@ -170,7 +172,7 @@ decodeTask lineNumber idText categoryText statusText titleText contentText = do
     status <- parseStatus lineNumber statusText
     title <- parseTaskTitle lineNumber titleText
     content <- parseTaskContent lineNumber contentText
-    Right (Right (Task identifier title content status categoryIdentifier))
+    Right (Right (mkTask identifier title content status categoryIdentifier))
 
 splitTabs :: String -> [String]
 splitTabs value =
@@ -180,15 +182,33 @@ splitTabs value =
 
 parseCategoryId :: Int -> String -> Either PersistenceError CategoryId
 parseCategoryId lineNumber text =
-    case readInt text of
-        Just value | value > 0 -> Right (CategoryId value)
-        _ -> Left (MalformedLine lineNumber ("Invalid category id: " <> text))
+    case readNatural text of
+        Nothing ->
+            Left (MalformedLine lineNumber ("Invalid category id: " <> text))
+        Just value ->
+            case mkCategoryId value of
+                Left domainError ->
+                    Left
+                        ( MalformedLine
+                            lineNumber
+                            (domainErrorMessage domainError)
+                        )
+                Right identifier -> Right identifier
 
 parseTaskId :: Int -> String -> Either PersistenceError TaskId
 parseTaskId lineNumber text =
-    case readInt text of
-        Just value | value > 0 -> Right (TaskId value)
-        _ -> Left (MalformedLine lineNumber ("Invalid task id: " <> text))
+    case readNatural text of
+        Nothing ->
+            Left (MalformedLine lineNumber ("Invalid task id: " <> text))
+        Just value ->
+            case mkTaskId value of
+                Left domainError ->
+                    Left
+                        ( MalformedLine
+                            lineNumber
+                            (domainErrorMessage domainError)
+                        )
+                Right identifier -> Right identifier
 
 parseCategoryName :: Int -> String -> Either PersistenceError CategoryName
 parseCategoryName lineNumber text =
@@ -214,11 +234,8 @@ parseStatus lineNumber text =
         Just status -> Right status
         Nothing -> Left (MalformedLine lineNumber ("Unknown status: " <> text))
 
-readInt :: String -> Maybe Int
-readInt text =
-    case reads text of
-        [(value, "")] -> Just value
-        _ -> Nothing
+readNatural :: String -> Maybe Natural
+readNatural = readMaybe
 
 -- File access.
 --------------------------------------------------------------------------------

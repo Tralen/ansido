@@ -1,0 +1,6 @@
+indentation: 4
+comma-style: leading
+import-export-style: leading
+haddock-style: auto
+unicode: never
+respectful: true

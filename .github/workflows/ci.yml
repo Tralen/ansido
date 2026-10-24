@@ -57,6 +57,23 @@ jobs:
       - name: Build sdist
         run: cabal sdist
 
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Fourmolu
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/fourmolu.zip" https://github.com/fourmolu/fourmolu/releases/download/v0.21.0.0/fourmolu-0.21.0.0-linux-x86_64.zip
+          echo "aadf6931653df7b96f52014cf8eb4285a3e8778cd0b531499fc3ee013e1e00c7  $RUNNER_TEMP/fourmolu.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/fourmolu.zip" -d "$RUNNER_TEMP"
+          install -Dm755 "$RUNNER_TEMP/fourmolu-0.21.0.0-linux-x86_64/fourmolu" "$HOME/.local/bin/fourmolu"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Check formatting
+        run: find src test app -name '*.hs' -print0 | xargs -0 fourmolu --mode check
+
   privacy:
     name: Secret scan
     runs-on: ubuntu-latest

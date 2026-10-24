@@ -1,10 +1,10 @@
 -- | Application version, single sourced from the Cabal package file.
 module Ansido.Version
-  ( versionText
-  ) where
+    ( versionText
+    ) where
 
 --------------------------------------------------------------------------------
-import           Data.Version (showVersion)
+import Data.Version (showVersion)
 
 import qualified Paths_ansido
 

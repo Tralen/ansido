@@ -5,6 +5,7 @@
 - GHC 9.14.1, the primary version used for the current release.
 - GHC 9.2.8 is also covered by CI to keep the lower `base` bound honest.
 - `cabal-install` 3.18 or newer.
+- Fourmolu 0.21.0.0, configured by `fourmolu.yaml`.
 - Ansiform 1.0.0 from Hackage.
 
 ## Commands
@@ -58,10 +59,13 @@ cabal test all
 cabal check
 cabal sdist
 cabal haddock --haddock-for-hackage
+fourmolu --mode check src test app
 hlint src test app
 ```
 
-`hlint` reports style hints and is not a gate. Install the Git hook once with `pre-commit install`; the gitleaks hook scans staged changes. CI scans the full history and the worktree with gitleaks through the `privacy` job.
+`fourmolu.yaml` is the single source of the formatting style. `fourmolu --mode check src test app` reports any file that differs, and `fourmolu --mode inplace src test app` rewrites it. CI repeats the check in the `formatting` job. `hlint` reports style hints and is not a gate.
+
+Install the Git hooks once with `pre-commit install`; they scan staged changes with gitleaks and format staged Haskell files with the local Fourmolu hook, which requires `fourmolu` on `PATH`. CI scans the full history and the worktree with gitleaks through the `privacy` job.
 
 ## Cross-platform
 
@@ -83,10 +87,14 @@ Publishing is manual. CI only builds and tests.
 
 1. Confirm that the version in `ansido.cabal` matches the tag you are about to create, and that `CHANGELOG.md` has an entry for it.
 2. Run `cabal check`, `cabal test all`, `cabal sdist` and `cabal haddock --haddock-for-hackage` locally.
-3. Create an annotated tag with `git tag -a v<version> -m "ansido <version>"` and push it. The project has no signing key configured, so tags are annotated rather than signed.
+3. Create a signed tag with `git tag -s v<version> -m "ansido <version>"` and push it. Verify it with `git tag -v v<version>`.
 4. Run the `Release` workflow manually (`workflow_dispatch`) with the tag as input. The `release` environment gates the publish job. The workflow validates the tag against `ansido.cabal`, builds the executable on Linux, macOS and Windows, generates `SHA256SUMS`, attests build provenance and attaches the archives to the GitHub release.
 
 Asset names follow `ansido-<version>-<os>-<arch>`. Linux and macOS use `.tar.gz`; Windows uses `.zip`. The Linux binary is built on Ubuntu 22.04 for a broader glibc range, and the macOS binary is built on `macos-15` for arm64.
+
+### Signing
+
+Commits and tags are signed with SSH. Git needs `gpg.format ssh`, `user.signingkey` pointing to the signing key, `commit.gpgSign true`, `tag.gpgSign true` and `gpg.ssh.allowedSignersFile` listing the signer e-mail with its public key. The public key must also be registered on GitHub as a signing key; an OpenPGP key may be registered as well, but SSH is the default here. Verify a commit with `git log --show-signature` and a tag with `git tag -v`.
 
 ### Hackage release
 
@@ -106,7 +114,7 @@ Asset names follow `ansido-<version>-<os>-<arch>`. Linux and macOS use `.tar.gz`
 
 4. Optionally upload the documentation with `cabal upload -d --publish -t "$HACKAGE_TOKEN"`.
 
-The `Hackage` workflow is a manual `workflow_dispatch` alternative that uses the `hackage` environment. It never runs on push or tag, so a candidate is always created before publication. The environment must define `HACKAGE_TOKEN` as an environment secret; the GitHub `release` environment gates the publish job.
+The `Hackage` workflow is a manual `workflow_dispatch` alternative that runs in the `hackage` environment. It never runs on push or tag, so a candidate is always created before publication. Create the `hackage` environment and store the registry token there as the `HACKAGE_TOKEN` environment secret. The `release` environment belongs to `release.yml` and is not read by this workflow.
 
 ## Versioning
 

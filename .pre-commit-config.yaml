@@ -3,3 +3,11 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+  - repo: local
+    hooks:
+      - id: fourmolu
+        name: fourmolu
+        description: Format Haskell sources with Fourmolu.
+        entry: fourmolu --mode inplace
+        language: system
+        files: \.hs$

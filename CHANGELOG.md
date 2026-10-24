@@ -90,6 +90,8 @@
 *Patches, bug fixes, and minor updates.*
 
 ### 0.9.1
+- Added a Fourmolu 0.21.0.0 configuration, a CI formatting gate and a local pre-commit hook, and formatted the Haskell sources.
+- Documented SSH-signed commits and tags, including the signing configuration and verification steps.
 - Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.
 - Added a gitleaks history scan to CI and a pre-commit configuration for staged changes.
 - Aligned CI with the release template: GHC 9.2.8 and 9.14.1, dependency cache, `cabal check` and `cabal sdist`.

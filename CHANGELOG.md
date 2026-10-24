@@ -3,6 +3,24 @@
 ## Version History
 *Major updates and feature releases.*
 
+### 0.10.0
+- The create forms now use the Ansiform line editor with an empty initial buffer, so arrow keys, `Home`, `End` and `Delete` move the cursor instead of inserting control characters in both create and edit modes.
+- Added a board sort that cycles with `o` through insertion order, status and title, shown on a `Sort:` line below the filter.
+- Sorting is stable; title order ignores case, and every filter or sort change keeps the selected task selected while it remains visible.
+- Changing a task status or editing a title now follows the selected task to its new position in a sorted table.
+- Added `v` as a back key on the details screen, keeping `Backspace` and `Esc`.
+- Added tests for the sort order, the sort and status selection handling and the new keys, and updated the create form prompt tests for the editable empty buffer.
+- Changed the add-task footer hint from `empty cancel` to `empty title cancels`.
+- Added a Fourmolu 0.21.0.0 configuration, a CI formatting gate and a local pre-commit hook, and formatted the Haskell sources.
+- Documented SSH-signed commits and tags, including the signing configuration and verification steps.
+- Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.
+- Added a gitleaks history scan to CI and a pre-commit configuration for staged changes, using the pinned gitleaks action.
+- Aligned CI with the release template: GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, actions pinned by commit SHA, Cabal 3.18.1.0, dependency cache, `cabal check`, `cabal haddock` and `cabal sdist`.
+- Documented the Windows/GHC 9.2.8 limitation caused by Ansiform's `hSize` dependency and removed the unused `release` environment reference from the GitHub release workflow.
+- Corrected the package description, README data file path, Windows instructions, versioning policy and stale feature claims.
+- Fixed stale comments and documentation around statuses, `reads`, Delete key decoding and startup errors.
+- Added the 0.9.0 feature section to the correct CHANGELOG section.
+
 ### 0.9.0
 - Raised Ansiform to 1.0 and adopted `promptWithInitial` in the edit forms.
 - Edit task and edit category now open their prompts with the current title, note and name, so only the changed part has to be retyped.
@@ -88,18 +106,6 @@
 
 ## Revision History
 *Patches, bug fixes, and minor updates.*
-
-### 0.9.1
-- Changed the add-task footer hint from `empty cancel` to `empty title cancels`.
-- Added a Fourmolu 0.21.0.0 configuration, a CI formatting gate and a local pre-commit hook, and formatted the Haskell sources.
-- Documented SSH-signed commits and tags, including the signing configuration and verification steps.
-- Prepared the project for the release checklist: manual GitHub and Hackage publication, checksum files and build provenance.
-- Added a gitleaks history scan to CI and a pre-commit configuration for staged changes, using the pinned gitleaks action.
-- Aligned CI with the release template: GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, actions pinned by commit SHA, Cabal 3.18.1.0, dependency cache, `cabal check`, `cabal haddock` and `cabal sdist`.
-- Documented the Windows/GHC 9.2.8 limitation caused by Ansiform's `hSize` dependency and removed the unused `release` environment reference from the GitHub release workflow.
-- Corrected the package description, README data file path, Windows instructions, versioning policy and stale feature claims.
-- Fixed stale comments and documentation around statuses, `reads`, Delete key decoding and startup errors.
-- Added the 0.9.0 feature section to the correct CHANGELOG section.
 
 ### 0.8.2
 - Made the data file portable: `ANSIDO_FILE` first, then `getHomeDirectory`, which works on Windows without `HOME`.

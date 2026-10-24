@@ -7,7 +7,7 @@ The interface is built with Ansiform pages, sections, borderless tables, forms a
 | Screen | Purpose |
 | --- | --- |
 | Categories | Category list with task counts, highlighting and navigation. This is always the initial screen. |
-| Board | Task table with title, note and status for the selected category, with a live status filter. |
+| Board | Task table with title, note and status for the selected category, with a live status filter and sort order. |
 | Details | Full task view with the complete note wrapped across lines. |
 | Edit task | Task form with the current content above the prompts. |
 | Help | Key reference in a borderless table, followed by the data file path. |
@@ -30,6 +30,7 @@ Every screen shares the same header, category bar and footer. The header shows t
 | `Space` | Cycle the selected task status forward. |
 | `e` | Edit the selected task. |
 | `f` | Cycle the status filter. |
+| `o` | Cycle the sort order. |
 | `Del` | Delete the selected task. |
 | `v` | Open the full task view. |
 | `Backspace` or `Esc` | Go back to the category selection. |
@@ -37,13 +38,13 @@ Every screen shares the same header, category bar and footer. The header shows t
 | `r` | Redraw the current page. |
 | `x` | Exit. |
 
-The status cycle is `Todo -> Doing -> Done -> Todo`. The selected row stays in place because the table keeps insertion order.
+The status cycle is `Todo -> Doing -> Done -> Todo`. Under the original order the selected row keeps its place because the table keeps insertion order; under a sort it follows the task to the new position.
 
-The footer shows the arrow keys without a label, followed by `Enter add`, `Space status`, `e edit`, `f filter`, `Del del`, `? help`, the back icon and `x exit`. The `w` and `s` keys still work, but they are documented here and on the help screen instead of the footer.
+The footer shows the arrow keys without a label, followed by `Enter add`, `Space status`, `e edit`, `f filter`, `o sort`, `Del del`, `? help`, the back icon and `x exit`. The `w` and `s` keys still work, but they are documented here and on the help screen instead of the footer.
 
 ### Details
 
-`Backspace` or `Esc` returns to the board, `Space` cycles the task status, `e` edits the task, `Del` deletes it, `?` opens help and `x` exits. The complete note is shown with word wrap.
+`Backspace`, `Esc` or `v` returns to the board, `Space` cycles the task status, `e` edits the task, `Del` deletes it, `?` opens help and `x` exits. The complete note is shown with word wrap.
 
 ### Edit task
 
@@ -71,19 +72,25 @@ The edit screen reuses the category form and shows the current name and task cou
 
 ### Back navigation
 
-The back key follows the screen hierarchy: details and task edit return to the board, category edit returns to the category selection, the board returns to the category selection, the category selection returns to the board and help returns to the board. `Backspace` is the primary back key, and `Esc` is an alternative.
+The back key follows the screen hierarchy: details and task edit return to the board, category edit returns to the category selection, the board returns to the category selection, the category selection returns to the board and help returns to the board. `Backspace` is the primary back key, `Esc` is an alternative, and `v` also returns from the details view.
 
 ### Prompts
 
-The create form has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the create prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection. In edit mode, both forms open their prompts with the current values and show the hint line `Edit the value and press Enter.`; clearing the title or category name is rejected, and clearing the task note removes it.
+The create form has two lines: the title and the note. Type the title, press `Enter`, type the note and press `Enter` again. An empty title cancels the create prompt. An empty note is valid and creates a task with `(empty)` in the note column. The category prompt has a single line. Empty category input cancels and returns to the category selection. Every form opens its prompts in the Ansiform line editor, which supports moving, deleting and inserting inside the text; edit forms start with the current value and show the hint line `Edit the value and press Enter.`. Clearing the title or category name is rejected, and clearing the task note removes it.
 
 Input is validated by the domain smart constructors, so an overlong title, an overlong note or a text with control characters becomes a notice instead of a broken record.
 
-## Filtering
+## Filtering and sorting
 
-The `f` key cycles the board filter through `all`, `Todo`, `Doing` and `Done`, then back to `all`. The `Filter:` line is the first line below the rule, with a blank line after it, so changing the filter does not move the table. The active filter name uses the status color: Todo red, Doing cyan, Done green, and all bold white.
+The `f` key cycles the board filter through `all`, `Todo`, `Doing` and `Done`, then back to `all`. The `Filter:` line is the first line below the rule, and the `Sort:` line follows it directly; a blank line separates them from the table. Changing either value does not move the table.
+
+The active filter name uses the status color: Todo red, Doing cyan, Done green, and all bold white. The active sort name uses the bold selection style.
 
 The filter applies to the task table and to the selected row. If the filter hides the selected task, the selection is clamped to the visible tasks. When a new task is created, the filter returns to `all` so the new task is visible. The category task counts remain totals and do not change with the filter.
+
+The `o` key cycles the sort order through `original`, `status` and `title`. The original order is the insertion order. The status order groups Todo, Doing and Done, and the title order is case-insensitive. Both orders are stable, so tasks with the same status or title keep their insertion order, and the sort is applied after the filter.
+
+When the order changes, the selected task stays selected and the cursor follows it to its new row. The same happens after a status change or an edit that moves the task in a sorted table. If the filter hides the task, the selection is clamped instead. The details and edit screens always resolve the task by identifier, so they are unaffected by the order.
 
 ## Layout
 
@@ -114,13 +121,13 @@ The task table shows at most ten tasks. The visible window follows the selection
 
 ## Text input
 
-The create, edit and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables the editor once for the whole form and returns the updated `Draw.State` with the typed values. Edit forms build their prompts with `promptWithInitial`, so the current value is the editable buffer; create forms use `promptAt`.
+The create, edit and category forms are built by `renderTaskForm` and `renderCategoryForm`, which return a `Page` and a list of `Prompt`s. `readForm` draws the page and reads the prompts, so the runner does not count lines or move the cursor itself. Each prompt is placed by zero-based section index, row inside the section and absolute column. `readForm` enables the editor once for the whole form and returns the updated `Draw.State` with the typed values. Every form uses `promptWithInitial`: edit forms pass the current value, and create forms pass an empty string so they use the same line editor with arrows, `Home`, `End` and `Delete`.
 
 The task form has two prompts, title and note. The category form has one prompt. In edit mode, the form adds a hint line before the prompts and the prompt indices account for that extra section.
 
 ## Key decoding
 
-Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. The Delete key is decoded from the `Esc [ 3 ~` sequence. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded but have no action. Space is a normal character and is handled by the board and details screens. On terminals that do not send ANSI escape sequences, such as some Windows consoles, use `j`/`k` or `w`/`s` for vertical navigation.
+Immediate input returns one character at a time. Arrow keys arrive as ANSI escape sequences. `readKeyEvent` reads the first character and, when it is `Esc`, waits up to 30 milliseconds for `[` or `O` and then for `A`, `B`, `C` or `D`. The Delete key is decoded from the `Esc [ 3 ~` sequence. A lone `Esc` becomes the back key. `Enter` is accepted as either carriage return or newline, and `Backspace` is accepted as either `DEL` or the backspace control character. Left and right arrows are decoded by the main loop and have no action outside a form; inside a form the Ansiform line editor reads them directly to move the cursor. Space is a normal character and is handled by the board and details screens. On terminals that do not send ANSI escape sequences, such as some Windows consoles, use `j`/`k` or `w`/`s` for vertical navigation.
 
 ## Theme
 

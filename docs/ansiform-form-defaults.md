@@ -40,19 +40,21 @@ The line editor supports printable characters, `Backspace`, `Delete`, `Left`, `R
 
 ## Use in ansido
 
-`renderTaskForm` and `renderCategoryForm` build every prompt with `promptAt` in create mode and with `promptWithInitial` in edit mode:
+`renderTaskForm` and `renderCategoryForm` build every prompt with `promptWithInitial`. Edit forms pass the current value; create forms pass an empty string, which the editor treats as an empty editable buffer. This gives every form the same cursor movement, deletion and insertion keys, instead of leaving the create forms on the terminal line discipline.
 
 - Edit task: the title and note prompts start with the current title and note.
 - Edit category: the name prompt starts with the current name.
-- The hint above the prompts reads `Edit the value and press Enter.`
+- Create task and create category: the prompts start empty but remain editable.
+- The hint above the prompts reads `Edit the value and press Enter.` in edit mode.
 
 Because the field already contains the current value, empty input is no longer a request to keep it:
 
 - An empty title or category name is rejected by the domain and becomes a notice.
 - An empty note is valid and clears the note.
+- In create mode, an empty title or category name still cancels before the domain sees it.
 
 The details body above the task form still shows the title, status, category and note for context. The category form shows the name and task count.
 
 ## Dependency
 
-`ansido` requires `ansiform >= 1.0 && < 1.1`. Earlier Ansiform releases only had `promptAt`, which is why the edit forms used to show the current value above empty prompts and treated empty input as "keep current".
+`ansido` requires `ansiform >= 1.0 && < 1.1`. Earlier Ansiform releases only had `promptAt`, which is why the edit forms used to show the current value above empty prompts and treated empty input as "keep current". Ansiform 1.0 added `promptWithInitial`, and its empty initial value is what lets the create forms use the same line editor.

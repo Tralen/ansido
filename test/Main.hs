@@ -84,6 +84,21 @@ fixtureWorkspace = snd <$> buildFixture
 fixtureCategory :: Either String Category
 fixtureCategory = fst <$> buildFixture
 
+-- | Two tasks whose status and title orders differ.
+sortFixture :: Either String (Category, Workspace)
+sortFixture = do
+    name <- rightOr (mkCategoryName "Work")
+    (category, workspace1) <- rightOr (addCategory name emptyWorkspace)
+    titleAlpha <- rightOr (mkTaskTitle "Alpha")
+    titleZeta <- rightOr (mkTaskTitle "Zeta")
+    emptyNote <- rightOr (mkTaskContent "")
+    (taskAlpha, workspace2) <-
+        rightOr (addTask (categoryId category) titleAlpha emptyNote workspace1)
+    (_, workspace3) <-
+        rightOr (addTask (categoryId category) titleZeta emptyNote workspace2)
+    workspace4 <- rightOr (moveTask (taskId taskAlpha) Doing workspace3)
+    pure (category, workspace4)
+
 -- Tests.
 --------------------------------------------------------------------------------
 
@@ -116,6 +131,9 @@ tests =
     , testInitialState
     , testCycleStatus
     , testFilter
+    , testSortOrder
+    , testSortKeepsSelection
+    , testStatusSortKeepsSelection
     , testEditTask
     , testEditValues
     , testMoveRow
@@ -540,6 +558,99 @@ testFilter =
         checkEqual "all count again" 2 (length (visibleTasks allAgain))
     )
 
+testSortOrder :: (String, Check)
+testSortOrder =
+    ( "sort order"
+    , do
+        sorted <- rightOr sortFixture
+        let category = fst sorted
+            workspace = snd sorted
+        board <-
+            rightOr
+                ( update
+                    (SelectCategory (categoryId category))
+                    (initialAppState workspace)
+                )
+        checkEqual
+            "original order"
+            [TaskId 1, TaskId 2]
+            (map taskId (visibleTasks board))
+        byStatus <- rightOr (update CycleSort board)
+        checkEqual "status sort" SortByStatus (uiSort (appUi byStatus))
+        checkEqual "status label" "status" (sortLabel (uiSort (appUi byStatus)))
+        checkEqual
+            "status order"
+            [TaskId 2, TaskId 1]
+            (map taskId (visibleTasks byStatus))
+        byTitle <- rightOr (update CycleSort byStatus)
+        checkEqual "title sort" SortByTitle (uiSort (appUi byTitle))
+        checkEqual "title label" "title" (sortLabel (uiSort (appUi byTitle)))
+        checkEqual
+            "title order"
+            [TaskId 1, TaskId 2]
+            (map taskId (visibleTasks byTitle))
+        backToOriginal <- rightOr (update CycleSort byTitle)
+        checkEqual "original again" SortOriginal (uiSort (appUi backToOriginal))
+        checkEqual "original label" "original" (sortLabel (uiSort (appUi backToOriginal)))
+        checkEqual
+            "original order again"
+            [TaskId 1, TaskId 2]
+            (map taskId (visibleTasks backToOriginal))
+    )
+
+testSortKeepsSelection :: (String, Check)
+testSortKeepsSelection =
+    ( "sort keeps selection"
+    , do
+        sorted <- rightOr sortFixture
+        let category = fst sorted
+            workspace = snd sorted
+        board <-
+            rightOr
+                ( update
+                    (SelectCategory (categoryId category))
+                    (initialAppState workspace)
+                )
+        checkEqual "initial selection" (Just (TaskId 1)) (selectedTaskId board)
+        byStatus <- rightOr (update CycleSort board)
+        checkEqual "selection kept after sort" (Just (TaskId 1)) (selectedTaskId byStatus)
+        checkEqual "row follows the task" 1 (rowIndexValue (uiRow (appUi byStatus)))
+        byTitle <- rightOr (update CycleSort byStatus)
+        checkEqual "selection kept after title sort" (Just (TaskId 1)) (selectedTaskId byTitle)
+        checkEqual "row follows the title" 0 (rowIndexValue (uiRow (appUi byTitle)))
+    )
+
+testStatusSortKeepsSelection :: (String, Check)
+testStatusSortKeepsSelection =
+    ( "status change keeps selection under sort"
+    , do
+        category <- fixtureCategory
+        workspace <- fixtureWorkspace
+        title <- rightOr (mkTaskTitle "Gamma")
+        content <- rightOr (mkTaskContent "")
+        (thirdTask, withThird) <-
+            rightOr (addTask (categoryId category) title content workspace)
+        moved <- rightOr (moveTask (taskId thirdTask) Doing withThird)
+        board <-
+            rightOr
+                ( update
+                    (SelectCategory (categoryId category))
+                    (initialAppState moved)
+                )
+        byStatus <- rightOr (update CycleSort board)
+        checkEqual
+            "status order before the change"
+            [TaskId 1, TaskId 2, TaskId 3]
+            (map taskId (visibleTasks byStatus))
+        changed <- rightOr (update CycleSelected byStatus)
+        checkEqual
+            "status order after the change"
+            [TaskId 2, TaskId 1, TaskId 3]
+            (map taskId (visibleTasks changed))
+        checkEqual "selection follows the status" (Just (TaskId 1)) (selectedTaskId changed)
+        checkEqual "row follows the status" 1 (rowIndexValue (uiRow (appUi changed)))
+    )
+
 testEditTask :: (String, Check)
 testEditTask =
     ( "edit task"
@@ -735,12 +846,12 @@ testTaskFormPrompts =
                     (promptSection titlePrompt + 1)
                     (promptSection contentPrompt)
                 checkEqual
-                    "title has no initial value"
-                    Nothing
+                    "title has an empty editable buffer"
+                    (Just "")
                     (promptInitial titlePrompt)
                 checkEqual
-                    "content has no initial value"
-                    Nothing
+                    "content has an empty editable buffer"
+                    (Just "")
                     (promptInitial contentPrompt)
             _ -> Left "unexpected prompt count"
         editApp <- rightOr (update OpenEditTask board)
@@ -784,8 +895,8 @@ testCategoryFormPrompts =
                     (promptSection addPrompt + 1)
                     (promptSection editPrompt)
                 checkEqual
-                    "add has no initial value"
-                    Nothing
+                    "add has an empty editable buffer"
+                    (Just "")
                     (promptInitial addPrompt)
                 checkEqual
                     "edit initial name"
@@ -843,6 +954,18 @@ testArrowKeys =
             (Just CycleFilterCommand)
             (commandForKey BoardScreen (KeyCharacter 'f'))
         checkEqual
+            "board o sorts"
+            (Just CycleSortCommand)
+            (commandForKey BoardScreen (KeyCharacter 'o'))
+        checkEqual
+            "details v goes back"
+            (Just BackCommand)
+            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'v'))
+        checkEqual
+            "board v opens details"
+            (Just DetailsCommand)
+            (commandForKey BoardScreen (KeyCharacter 'v'))
+        checkEqual
             "details e edits"
             (Just EditTaskCommand)
             (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'e'))
@@ -850,6 +973,10 @@ testArrowKeys =
             "details f is free"
             Nothing
             (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'f'))
+        checkEqual
+            "details o is free"
+            Nothing
+            (commandForKey (DetailsScreen (TaskId 1)) (KeyCharacter 'o'))
     )
 
 testBackActions :: (String, Check)

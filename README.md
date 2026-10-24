@@ -30,9 +30,11 @@ The application is functional. It includes:
 - A single task table with title, note and status columns, without borders.
 - Vertical navigation with arrow keys, `j` and `k`, or `w` and `s`.
 - A status filter that cycles through all, Todo, Doing and Done.
+- A sort that cycles with `o` through insertion order, status and title.
+- Arrow keys, `Home`, `End` and `Delete` edit text in the create and edit forms.
 - `Enter` to add a task and `Space` to cycle the selected task status.
 - `e` to edit the selected task or category, with the current values pre-filled in the form.
-- `v` to view the full note with word wrap.
+- `v` to view the full note with word wrap, and to return from the details view.
 - `Backspace` to go back and `Del` to delete tasks and categories.
 - A help page with the data file path.
 - A shared theme for header, footer and menus.
@@ -61,7 +63,7 @@ ANSIDO_FILE=./workspace.tsv cabal run ansido
 $env:ANSIDO_FILE = ".\workspace.tsv"; cabal run ansido
 ```
 
-The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks. The edit forms open with the current values pre-filled, so only the changed part has to be retyped.
+The application opens on the category screen. Press `n` to create the first category. Use `↑` and `↓` to highlight a category and `Enter` to open its board; the digits `1` to `9` open a category directly. On the task table, press `Enter` to add a task: type the title, press Enter, type the note and press Enter again. Use `↑` and `↓` to select a task, `Space` to cycle its status, `f` to filter by status, `o` to sort the table, `e` to edit, `v` to read the full note, `Del` to delete it, `Backspace` to go back and `?` for the full key reference. The create and edit forms move the cursor with the arrow keys, `Home`, `End` and `Delete`. On the category screen, `e` renames the highlighted category and `Del` deletes it together with its tasks. The edit forms open with the current values pre-filled, so only the changed part has to be retyped.
 
 Pre-built binaries for Linux, macOS and Windows are attached to each GitHub release.
 

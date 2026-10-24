@@ -40,6 +40,7 @@ data Command
     | EditCategoryCommand
     | DeleteCategoryCommand
     | CycleFilterCommand
+    | CycleSortCommand
     | CycleCommand
     | DeleteCommand
     | MoveRowCommand Direction
@@ -108,6 +109,7 @@ boardCommand key =
         ' ' -> Just CycleCommand
         'e' -> Just EditTaskCommand
         'f' -> Just CycleFilterCommand
+        'o' -> Just CycleSortCommand
         'v' -> Just DetailsCommand
         'w' -> Just (MoveRowCommand Previous)
         's' -> Just (MoveRowCommand Next)
@@ -121,6 +123,7 @@ detailsCommand key =
     case key of
         ' ' -> Just CycleCommand
         'e' -> Just EditTaskCommand
+        'v' -> Just BackCommand
         '?' -> Just HelpCommand
         _ -> Nothing
 

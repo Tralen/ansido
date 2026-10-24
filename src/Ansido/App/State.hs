@@ -2,6 +2,7 @@
 module Ansido.App.State
     ( Screen (..)
     , Filter (..)
+    , Sort (..)
     , RowIndex (..)
     , UiState (..)
     , AppState (..)
@@ -17,10 +18,14 @@ module Ansido.App.State
     , filterTasks
     , filterLabel
     , nextFilter
+    , sortLabel
+    , nextSort
     , withNotice
     ) where
 
 --------------------------------------------------------------------------------
+import Data.Char (toLower)
+import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
 
 import Ansido.Domain
@@ -46,11 +51,16 @@ newtype RowIndex = RowIndex {rowIndexValue :: Int}
 data Filter = ShowAll | OnlyStatus Status
     deriving (Eq, Show)
 
+-- | Order of the task table. 'SortOriginal' keeps the insertion order.
+data Sort = SortOriginal | SortByStatus | SortByTitle
+    deriving (Eq, Show)
+
 -- | Everything the interface needs besides the workspace.
 data UiState = UiState
     { uiScreen :: Screen
     , uiCategory :: Maybe CategoryId
     , uiFilter :: Filter
+    , uiSort :: Sort
     , uiRow :: RowIndex
     , uiNotice :: Maybe Notice
     }
@@ -82,6 +92,7 @@ data Action
     | MoveRow Direction
     | MoveCategory Direction
     | CycleFilter
+    | CycleSort
     | CycleSelected
     | DeleteSelected
     | DeleteSelectedCategory
@@ -114,6 +125,7 @@ initialUiState workspace =
         { uiScreen = CategoryScreen
         , uiCategory = fmap categoryId (listToMaybe (workspaceCategories workspace))
         , uiFilter = ShowAll
+        , uiSort = SortOriginal
         , uiRow = RowIndex 0
         , uiNotice = Nothing
         }
@@ -124,15 +136,27 @@ currentCategory app =
     uiCategory (appUi app) >>= \identifier ->
         findCategory identifier (appWorkspace app)
 
--- | Tasks visible in the selected category, in insertion order.
+-- | Tasks visible in the selected category, filtered and sorted.
 visibleTasks :: AppState -> [Task]
 visibleTasks app =
     case uiCategory (appUi app) of
         Nothing -> []
         Just identifier ->
-            filterTasks
+            orderTasks
                 (uiFilter (appUi app))
+                (uiSort (appUi app))
                 (categoryTasks identifier (appWorkspace app))
+
+-- | Applies the filter and then the sort order.
+orderTasks :: Filter -> Sort -> [Task] -> [Task]
+orderTasks filterValue sortValue =
+    sortTasks sortValue . filterTasks filterValue
+
+-- | Sorts tasks, keeping equal entries in their original order.
+sortTasks :: Sort -> [Task] -> [Task]
+sortTasks SortOriginal = id
+sortTasks SortByStatus = sortOn taskStatus
+sortTasks SortByTitle = sortOn (map toLower . taskTitleText . taskTitle)
 
 -- | Applies the state filter to a list of tasks.
 filterTasks :: Filter -> [Task] -> [Task]
@@ -150,6 +174,18 @@ nextFilter ShowAll = OnlyStatus Todo
 nextFilter (OnlyStatus Todo) = OnlyStatus Doing
 nextFilter (OnlyStatus Doing) = OnlyStatus Done
 nextFilter (OnlyStatus Done) = ShowAll
+
+-- | Human readable label of a sort order.
+sortLabel :: Sort -> String
+sortLabel SortOriginal = "original"
+sortLabel SortByStatus = "status"
+sortLabel SortByTitle = "title"
+
+-- | Advances the sort order through original, status and title.
+nextSort :: Sort -> Sort
+nextSort SortOriginal = SortByStatus
+nextSort SortByStatus = SortByTitle
+nextSort SortByTitle = SortOriginal
 
 -- | Task under the cursor, or the task open on the details or edit screen.
 selectedTaskId :: AppState -> Maybe TaskId

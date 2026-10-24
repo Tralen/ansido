@@ -99,6 +99,7 @@ execute path state command =
         EditCategoryCommand -> startEditCategoryInput path state
         DeleteCategoryCommand -> applyAction path state DeleteSelectedCategory
         CycleFilterCommand -> applyAction path state CycleFilter
+        CycleSortCommand -> applyAction path state CycleSort
         CycleCommand -> applyAction path state CycleSelected
         DeleteCommand -> applyAction path state DeleteSelected
         MoveRowCommand direction ->

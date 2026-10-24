@@ -15,6 +15,8 @@ module Ansido.Ui.Page
     ) where
 
 --------------------------------------------------------------------------------
+import Data.Maybe (fromMaybe)
+
 import Ansiform hiding (renderPage)
 
 import Ansido.App.State
@@ -78,9 +80,11 @@ renderTaskForm theme app =
             initialContent
         ]
     promptFor sectionIndex column initial =
-        case initial of
-            Nothing -> promptAt sectionIndex 0 column
-            Just value -> promptWithInitial sectionIndex 0 column value
+        promptWithInitial
+            sectionIndex
+            0
+            column
+            (fromMaybe "" initial)
 
 -- | Renders a category form and returns the prompt read by 'readForm'.
 renderCategoryForm :: UiTheme -> AppState -> (Page, [Prompt])
@@ -113,18 +117,11 @@ renderCategoryForm theme app =
         | editMode = categoryNameText . categoryName <$> currentCategory app
         | otherwise = Nothing
     prompts =
-        [ case initialName of
-            Nothing ->
-                promptAt
-                    (formNumber promptIndex)
-                    0
-                    (formNumber categoryPromptColumn)
-            Just value ->
-                promptWithInitial
-                    (formNumber promptIndex)
-                    0
-                    (formNumber categoryPromptColumn)
-                    value
+        [ promptWithInitial
+            (formNumber promptIndex)
+            0
+            (formNumber categoryPromptColumn)
+            (fromMaybe "" initialName)
         ]
 
 pageChrome :: UiTheme -> AppState -> [Section]
@@ -220,6 +217,7 @@ boardTableSection :: UiTheme -> AppState -> Section
 boardTableSection theme app =
     section
         ( [ filterPrinter theme app
+          , sortPrinter theme app
           , printerEmpty 1
           , rowTablePrinter
                 boardWidths
@@ -237,6 +235,7 @@ boardEmptySection :: UiTheme -> AppState -> String -> Section
 boardEmptySection theme app message =
     section
         ( [ filterPrinter theme app
+          , sortPrinter theme app
           , printerEmpty 1
           , printerLeft 1 (blockSimple message (themeMuted base))
           ]
@@ -259,6 +258,16 @@ filterPrinter theme app =
     active = uiFilter (appUi app)
     filterStyle ShowAll = uiSelected theme
     filterStyle (OnlyStatus status) = statusStyle theme status
+
+sortPrinter :: UiTheme -> AppState -> Printer
+sortPrinter theme app =
+    printerLeft
+        1
+        ( blockCycle
+            [ ("Sort:   ", themeMuted (uiBase theme))
+            , (sortLabel (uiSort (appUi app)), uiSelected theme)
+            ]
+        )
 
 boardRows :: UiTheme -> AppState -> [[Cell]]
 boardRows theme app =
@@ -432,8 +441,9 @@ helpEntries =
     , ("Space", "cycle the selected task status")
     , ("e", "edit the selected task or category")
     , ("f (board)", "filter by status")
+    , ("o (board)", "sort by status, title or order")
     , ("Del", "delete the selected task or category")
-    , ("v", "view the full note")
+    , ("v", "view the full note or go back")
     , ("Backspace / Esc", "go back one screen")
     , ("n", "create a category")
     , ("1 .. 9", "open a category")
@@ -560,13 +570,14 @@ footerHints theme screen =
             , keyHintText theme "Space" "status"
             , keyHint theme 'e' "edit"
             , keyHint theme 'f' "filter"
+            , keyHint theme 'o' "sort"
             , keyHintText theme "Del" "del"
             , keyHintText theme "?" "help"
             , keyHintText theme "⌫" "back"
             , keyHint theme 'x' "exit"
             ]
         DetailsScreen _ ->
-            [ keyHintText theme "⌫" "back"
+            [ keyHintText theme "⌫ / v" "back"
             , keyHintText theme "Space" "status"
             , keyHint theme 'e' "edit"
             , keyHintText theme "Del" "del"

@@ -38,14 +38,15 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Workspace invariants.
 - Encode and decode round trips, version 1 compatibility, CRLF files and malformed inputs.
 - Window slicing and borderless table construction with truncation.
-- Arrow, Enter/Backspace/Space, Delete, W/S, edit/filter and back navigation key mapping.
+- Arrow, Enter/Backspace/Space, Delete, W/S, edit/filter/sort and back navigation key mapping.
 - Category keys for creating, editing and deleting categories.
 - Category navigation with arrows, `j`/`k`, `w`/`s` and the `Enter` board shortcut.
-- Initial state on the category screen, vertical navigation, status cycling, filtering, editing, details, submit and select actions.
-- Category editing, category deletion with its tasks, and the pre-filled edit prompts.
+- Initial state on the category screen, vertical navigation, status cycling, filtering, sorting, editing, details, submit and select actions.
+- Sort ordering, the selection that follows a sorted or filtered task, and the status change under a status sort.
+- Category editing, category deletion with its tasks, and the editable create and pre-filled edit form prompts.
 - Data file path propagation through `withDataFile`.
 
-The current suite has 43 tests.
+The current suite has 46 tests.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 

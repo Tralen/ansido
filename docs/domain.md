@@ -60,7 +60,7 @@ Identifiers are allocated from the current maximum plus one. Deleting the newest
 
 ## Status cycle
 
-The `Space` key follows `Todo -> Doing -> Done -> Todo` through `nextStatus`. The application applies it with `moveTask`, so the transition stays pure and the task keeps its position in the table.
+The `Space` key follows `Todo -> Doing -> Done -> Todo` through `nextStatus`. The application applies it with `moveTask`, so the transition stays pure. Under the original order the task keeps its position in the table; under a sort the selection follows the task to its new position.
 
 Status labels are displayed in title case as `Todo`, `Doing` and `Done`, while the persistence format keeps the lowercase keys `todo`, `doing` and `done`.
 

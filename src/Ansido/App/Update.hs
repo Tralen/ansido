@@ -31,7 +31,8 @@ update action app =
         SelectCategory identifier -> selectCategory identifier app
         MoveRow direction -> Right (moveRow direction app)
         MoveCategory direction -> Right (moveCategory direction app)
-        CycleFilter -> Right (cycleFilter app)
+        CycleFilter -> Right (keepSelection (selectedTaskId app) (cycleFilter app))
+        CycleSort -> Right (keepSelection (selectedTaskId app) (cycleSort app))
         CycleSelected -> cycleSelected app
         DeleteSelected -> deleteSelected app
         DeleteSelectedCategory -> deleteSelectedCategory app
@@ -126,15 +127,35 @@ selectCategory identifier app
 
 cycleFilter :: AppState -> AppState
 cycleFilter app =
-    clampAppState
-        ( app
-            { appUi =
-                (appUi app)
-                    { uiFilter = nextFilter (uiFilter (appUi app))
-                    , uiNotice = Nothing
-                    }
-            }
-        )
+    app
+        { appUi =
+            (appUi app)
+                { uiFilter = nextFilter (uiFilter (appUi app))
+                , uiNotice = Nothing
+                }
+        }
+
+-- | Cycles the table order through original, status and title.
+cycleSort :: AppState -> AppState
+cycleSort app =
+    app
+        { appUi =
+            (appUi app)
+                { uiSort = nextSort (uiSort (appUi app))
+                , uiNotice = Nothing
+                }
+        }
+
+-- | Clamps the state and keeps the given task selected while it is visible.
+keepSelection :: Maybe TaskId -> AppState -> AppState
+keepSelection identifier app =
+    let clamped = clampAppState app
+        current = rowIndexValue (uiRow (appUi clamped))
+        position =
+            case identifier >>= \wanted -> findIndex ((== wanted) . taskId) (visibleTasks clamped) of
+                Just index -> index
+                Nothing -> current
+     in clamped{appUi = (appUi clamped){uiRow = RowIndex position}}
 
 moveRow :: Direction -> AppState -> AppState
 moveRow direction app =
@@ -184,7 +205,8 @@ cycleSelected app =
                         NoticeInfo
                         ("Status changed to " <> statusLabel next <> ".")
             Right
-                ( clampAppState
+                ( keepSelection
+                    (Just (taskId task))
                     ( app
                         { appWorkspace = workspace
                         , appUi = (appUi app){uiNotice = Just notice}
@@ -226,23 +248,16 @@ submitEdit identifier rawTitle rawContent app =
             content <- mkTaskContent rawContent
             workspace <- editTask identifier title content (appWorkspace app)
             let categoryIdentifier = taskCategory task
-                tasks =
-                    filterTasks
-                        (uiFilter (appUi app))
-                        (categoryTasks categoryIdentifier workspace)
-                position = case findIndex ((== identifier) . taskId) tasks of
-                    Just index -> index
-                    Nothing -> 0
                 notice = Notice NoticeInfo "Task updated."
             Right
-                ( clampAppState
+                ( keepSelection
+                    (Just identifier)
                     ( app
                         { appWorkspace = workspace
                         , appUi =
                             (appUi app)
                                 { uiScreen = BoardScreen
                                 , uiCategory = Just categoryIdentifier
-                                , uiRow = RowIndex position
                                 , uiNotice = Just notice
                                 }
                         }
@@ -261,15 +276,14 @@ submitTask rawTitle rawContent app =
         Just identifier -> do
             title <- mkTaskTitle rawTitle
             content <- mkTaskContent rawContent
-            (_, workspace) <- addTask identifier title content (appWorkspace app)
-            let tasks = categoryTasks identifier workspace
-                position = max 0 (length tasks - 1)
-                notice =
+            (task, workspace) <- addTask identifier title content (appWorkspace app)
+            let notice =
                     Notice
                         NoticeInfo
                         ("Task added: " <> taskTitleText title)
             Right
-                ( clampAppState
+                ( keepSelection
+                    (Just (taskId task))
                     ( app
                         { appWorkspace = workspace
                         , appUi =
@@ -277,7 +291,6 @@ submitTask rawTitle rawContent app =
                                 { uiScreen = BoardScreen
                                 , uiCategory = Just identifier
                                 , uiFilter = ShowAll
-                                , uiRow = RowIndex position
                                 , uiNotice = Just notice
                                 }
                         }

@@ -7,6 +7,8 @@
 - Split the board footer into two solid bars: `Enter add`, `Space status`, `e edit`, `f filter` and `o sort` on the first, and `↑↓`, `Del del`, `? help`, `⌫ back` and `x exit` on the second.
 - Hid the constructors of the domain entities and identifiers. `mkCategoryId`, `mkTaskId`, `mkCategory` and `mkTask` are now the public constructors, and the persistence decoder and tests use them.
 - Category and task identifiers are positive `Natural` values, and `RowIndex` is a `Natural` built by `mkRowIndex` with a zero clamp; zero identifiers are rejected.
+- Replaced the remaining `foldl` in the persistence encoder with `Data.List.intercalate`.
+- Added `-Wincomplete-patterns` and a manual `werror` flag that adds `-Werror` in development, CI, release and Hackage workflows. The flag is off by default because `cabal check` rejects an unconditional `-Werror` and Hackage would reject the package.
 - The create forms now use the Ansiform line editor with an empty initial buffer, so arrow keys, `Home`, `End` and `Delete` move the cursor instead of inserting control characters in both create and edit modes.
 - Added a board sort that cycles with `o` through insertion order, status and title, shown on a `Sort:` line below the filter.
 - Sorting is stable; title order ignores case, and every filter or sort change keeps the selected task selected while it remains visible.

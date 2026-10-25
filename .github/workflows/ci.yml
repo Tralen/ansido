@@ -50,8 +50,8 @@ jobs:
             ${{ runner.os }}-ghc-${{ steps.setup.outputs.ghc-version }}-
 
       - run: cabal update
-      - run: cabal build all
-      - run: cabal test all
+      - run: cabal build all --enable-tests -fwerror
+      - run: cabal test all -fwerror
       - run: cabal check
       - run: cabal haddock
       - run: cabal sdist

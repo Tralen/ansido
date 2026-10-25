@@ -49,8 +49,8 @@ jobs:
         run: cabal update
       - name: Verify package
         run: |
-          cabal build all --enable-tests
-          cabal test all
+          cabal build all --enable-tests -fwerror
+          cabal test all -fwerror
           cabal check
           cabal sdist
       - name: Upload to Hackage

@@ -15,6 +15,7 @@ module Ansido.Persistence
 
 --------------------------------------------------------------------------------
 import Control.Exception (IOException, evaluate, try)
+import Data.List (intercalate)
 import Data.Maybe (catMaybes)
 import Numeric.Natural (Natural)
 import System.Directory
@@ -109,10 +110,7 @@ encodeTask task =
         ]
 
 joinTabs :: [String] -> String
-joinTabs values =
-    case values of
-        [] -> ""
-        (v : vs) -> foldl (\acc next -> acc <> "\t" <> next) v vs
+joinTabs = intercalate "\t"
 
 -- | Parses the plain text format into a workspace.
 --

@@ -22,6 +22,14 @@ extra-doc-files:
   docs/*.md
 extra-source-files: fourmolu.yaml
 
+-- Unconditional -Werror makes cabal check fail and Hackage reject the package,
+-- because future GHC releases add warnings. Keep this flag off by default and
+-- enable it with -fwerror in development, CI, release and Hackage workflows.
+flag werror
+  description: Treat GHC warnings as errors in development and CI.
+  default:     False
+  manual:      True
+
 source-repository head
   type:     git
   location: https://github.com/Tralen/ansido
@@ -31,8 +39,11 @@ common commons
   ghc-options:
     -Wall
     -Wcompat
+    -Wincomplete-patterns
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
+  if flag(werror)
+    ghc-options: -Werror
 
 library
   import:           commons

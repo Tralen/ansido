@@ -102,8 +102,8 @@ newtype TaskContent = TaskContent {taskContentText :: String}
 
 -- | A category groups tasks and scopes the board.
 data Category = Category
-    { categoryId :: CategoryId
-    , categoryName :: CategoryName
+    { categoryId :: !CategoryId
+    , categoryName :: !CategoryName
     }
     deriving (Eq, Show)
 
@@ -113,11 +113,11 @@ data Status = Todo | Doing | Done
 
 -- | A task with a title, a note, a status and the category that owns it.
 data Task = Task
-    { taskId :: TaskId
-    , taskTitle :: TaskTitle
-    , taskContent :: TaskContent
-    , taskStatus :: Status
-    , taskCategory :: CategoryId
+    { taskId :: !TaskId
+    , taskTitle :: !TaskTitle
+    , taskContent :: !TaskContent
+    , taskStatus :: !Status
+    , taskCategory :: !CategoryId
     }
     deriving (Eq, Show)
 

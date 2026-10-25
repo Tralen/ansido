@@ -50,7 +50,7 @@ The drawing state from Ansiform is threaded through the loop in `LoopState`. Eve
 
 ## Immutability
 
-All bindings and fields are immutable. Transitions use record updates that produce new values. The `Workspace` constructor is hidden by the module export list, so the only way to build one outside `Ansido.Domain` is through `mkWorkspace` or the transitions. The entity constructors are hidden as well: `mkCategoryId`, `mkTaskId`, `mkCategory` and `mkTask` are the public constructors. Lists are treated as persistent values; nothing is modified in place.
+All bindings and fields are immutable. Transitions use record updates that produce new values. The `Workspace` constructor is hidden by the module export list, so the only way to build one outside `Ansido.Domain` is through `mkWorkspace` or the transitions. The entity constructors are hidden as well: `mkCategoryId`, `mkTaskId`, `mkCategory` and `mkTask` are the public constructors. The `Category` and `Task` fields are strict. Lists are treated as persistent values; nothing is modified in place.
 
 ## Errors as data
 

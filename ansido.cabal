@@ -81,6 +81,7 @@ test-suite ansido-test
   hs-source-dirs:   test
   main-is:          Main.hs
   build-depends:
+    QuickCheck >= 2.14 && < 2.20,
     ansido,
     ansiform >= 1.0 && < 1.1,
     base     >= 4.16 && < 5

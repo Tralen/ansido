@@ -18,7 +18,7 @@ The domain module defines the vocabulary of the application and the only legal t
 
 `Workspace` hides its constructor. Values are built by `mkWorkspace`, `emptyWorkspace`, `addCategory`, `editCategory`, `deleteCategory`, `addTask`, `moveTask`, `advanceTask`, `editTask` and `deleteTask`.
 
-The constructors of `CategoryId`, `TaskId`, `Category`, `Task`, `CategoryName`, `TaskTitle` and `TaskContent` are hidden. `mkCategoryId` and `mkTaskId` reject zero, `mkCategoryName`, `mkTaskTitle` and `mkTaskContent` validate the text, and `mkCategory` and `mkTask` build an entity only from already validated parts. `Status (..)` stays public because it is a closed enumeration.
+The constructors of `CategoryId`, `TaskId`, `Category`, `Task`, `CategoryName`, `TaskTitle` and `TaskContent` are hidden. `mkCategoryId` and `mkTaskId` reject zero, `mkCategoryName`, `mkTaskTitle` and `mkTaskContent` validate the text, and `mkCategory` and `mkTask` build an entity only from already validated parts. `Status (..)` stays public because it is a closed enumeration. The `Category` and `Task` fields are strict, so the validated values are forced as the records are built.
 
 ## Validation
 

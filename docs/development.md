@@ -44,10 +44,11 @@ The test suite is a small self-contained runner in `test/Main.hs`. It covers:
 - Initial state on the category screen, vertical navigation, status cycling, filtering, sorting, editing, details, submit and select actions.
 - Sort ordering, the selection that follows a sorted or filtered task, and the status change under a status sort.
 - Identifier validation, including zero rejection, invalid persisted identifiers and the row index clamp.
+- QuickCheck properties for encode/decode, windowing, filter/sort and identifier validation.
 - Category editing, category deletion with its tasks, and the editable create and pre-filled edit form prompts.
 - Data file path propagation through `withDataFile`.
 
-The current suite has 48 tests.
+The current suite has 53 tests. The QuickCheck properties use a fixed seed (`2026`) and 100 successes, so a run is deterministic.
 
 A failing test prints its name and message and exits with a failure code. A passing run prints the number of tests.
 
@@ -149,7 +150,7 @@ Every release is recorded in `CHANGELOG.md`, in the section that matches the siz
 
 ## Adding a dependency
 
-Keep the dependency footprint small. The application currently uses `base`, `ansiform`, `directory` and `filepath`. Arrow decoding uses `System.Timeout`, which is part of `base`. Persistence is deliberately plain text, so a database or serialization library is not needed. Justify any new dependency in the change summary and in this document.
+Keep the dependency footprint small. The application currently uses `base`, `ansiform`, `directory` and `filepath`. The test suite adds QuickCheck 2.14 or newer, below 2.20, for the property tests. Arrow decoding uses `System.Timeout`, which is part of `base`. Persistence is deliberately plain text, so a database or serialization library is not needed. Justify any new dependency in the change summary and in this document.
 
 ## Code rules
 

@@ -2,8 +2,31 @@
 module Main (main) where
 
 --------------------------------------------------------------------------------
+import Data.Char (toLower)
 import Numeric.Natural (Natural)
 import System.Exit (exitFailure)
+import Test.QuickCheck
+    ( Gen
+    , Property
+    , arbitrary
+    , chatty
+    , chooseInt
+    , chooseInteger
+    , conjoin
+    , counterexample
+    , elements
+    , forAll
+    , isSuccess
+    , maxSuccess
+    , output
+    , property
+    , quickCheckWithResult
+    , replay
+    , stdArgs
+    , vectorOf
+    , (===)
+    )
+import Test.QuickCheck.Random (mkQCGen)
 
 import Ansiform
     ( formNumber
@@ -1154,14 +1177,176 @@ testCategoryKeys =
             (commandForKey (EditCategoryScreen category1) KeyEnter)
     )
 
+-- Properties.
+--------------------------------------------------------------------------------
+
+properties :: [(String, Property)]
+properties =
+    [ ("encode and decode roundtrip", propEncodeDecode)
+    , ("window keeps the selected row", propWindow)
+    , ("visibleTasks applies filter and sort", propVisibleTasks)
+    , ("task titles are trimmed", propTaskTitleTrim)
+    , ("identifiers reject zero", propIdentifierValidation)
+    ]
+
+genCategoryId :: Int -> Gen CategoryId
+genCategoryId index =
+    case mkCategoryId (fromIntegral index) of
+        Right identifier -> pure identifier
+        Left _ -> genCategoryId (index + 1)
+
+genTaskId :: Int -> Gen TaskId
+genTaskId index =
+    case mkTaskId (fromIntegral index) of
+        Right identifier -> pure identifier
+        Left _ -> genTaskId (index + 1)
+
+genCategory :: Int -> Gen Category
+genCategory index = do
+    identifier <- genCategoryId index
+    suffixLength <- chooseInt (0, 10)
+    suffix <- vectorOf suffixLength (elements ['a' .. 'z'])
+    case mkCategoryName ("category" <> show index <> suffix) of
+        Right name -> pure (mkCategory identifier name)
+        Left _ -> genCategory index
+
+genTask :: [Category] -> Int -> Gen Task
+genTask categories index = do
+    identifier <- genTaskId index
+    category <- elements categories
+    titleLength <- chooseInt (1, 20)
+    titleChars <- vectorOf titleLength (elements ['a' .. 'z'])
+    contentLength <- chooseInt (0, 20)
+    contentChars <- vectorOf contentLength (elements ['a' .. 'z'])
+    status <- elements [Todo, Doing, Done]
+    case (mkTaskTitle ("task" <> show index <> titleChars), mkTaskContent contentChars) of
+        (Right title, Right content) ->
+            pure (mkTask identifier title content status (categoryId category))
+        _ -> genTask categories index
+
+genWorkspace :: Gen Workspace
+genWorkspace = do
+    categoryCount <- chooseInt (0, 4)
+    categories <- traverse genCategory [1 .. categoryCount]
+    generatedTaskCount <- if null categories then pure 0 else chooseInt (0, 8)
+    tasks <-
+        if null categories
+            then pure []
+            else traverse (genTask categories) [1 .. generatedTaskCount]
+    case mkWorkspace categories tasks of
+        Right workspace -> pure workspace
+        Left _ -> genWorkspace
+
+propEncodeDecode :: Property
+propEncodeDecode =
+    forAll genWorkspace $ \workspace ->
+        counterexample (show workspace) $
+            decodeWorkspace (encodeWorkspace workspace) === Right workspace
+
+propWindow :: Property
+propWindow =
+    forAll (chooseInt (1, 20)) $ \size ->
+        forAll (vectorOf 60 (arbitrary :: Gen Int)) $ \items ->
+            forAll (chooseInt (0, length items - 1)) $ \index ->
+                let win = windowAround size index items
+                    selected = indexMaybe index items
+                 in counterexample (show (size, index, windowItems win)) $
+                        conjoin
+                            [ property (length (windowItems win) <= size)
+                            , property (maybe False (\item -> item `elem` windowItems win) selected)
+                            ]
+
+propVisibleTasks :: Property
+propVisibleTasks =
+    forAll genWorkspace $ \workspace ->
+        forAll (elements [ShowAll, OnlyStatus Todo, OnlyStatus Doing, OnlyStatus Done]) $ \filterValue ->
+            forAll (elements [SortOriginal, SortByStatus, SortByTitle]) $ \sortValue ->
+                let base = initialAppState workspace
+                    app =
+                        base
+                            { appUi =
+                                (appUi base)
+                                    { uiFilter = filterValue
+                                    , uiSort = sortValue
+                                    }
+                            }
+                    tasks = visibleTasks app
+                 in counterexample (show (filterValue, sortValue, map taskId tasks)) $
+                        conjoin
+                            [ property (all (matchesFilter filterValue) tasks)
+                            , property (orderIsCorrect sortValue tasks)
+                            ]
+
+matchesFilter :: Filter -> Task -> Bool
+matchesFilter ShowAll _ = True
+matchesFilter (OnlyStatus status) task = taskStatus task == status
+
+orderIsCorrect :: Sort -> [Task] -> Bool
+orderIsCorrect SortOriginal _ = True
+orderIsCorrect SortByStatus tasks = nonDecreasing (map taskStatus tasks)
+orderIsCorrect SortByTitle tasks =
+    nonDecreasing (map (map toLower . taskTitleText . taskTitle) tasks)
+
+nonDecreasing :: (Ord a) => [a] -> Bool
+nonDecreasing values = and (zipWith (<=) values (drop 1 values))
+
+propTaskTitleTrim :: Property
+propTaskTitleTrim =
+    forAll (chooseInt (1, 20)) $ \titleLength ->
+        forAll (vectorOf titleLength (elements ['a' .. 'z'])) $ \chars ->
+            case mkTaskTitle ("  " <> chars <> "  ") of
+                Right title -> property (taskTitleText title == chars)
+                Left _ -> counterexample "valid title rejected" (property False)
+
+propIdentifierValidation :: Property
+propIdentifierValidation =
+    forAll (chooseInteger (0, 1000)) $ \raw ->
+        let natural = fromInteger raw
+            categoryResult = mkCategoryId natural
+            taskResult = mkTaskId natural
+         in counterexample (show raw) $
+                conjoin
+                    [ case categoryResult of
+                        Right identifier ->
+                            property (raw > 0 && categoryIdValue identifier == natural)
+                        Left _ -> property (raw == 0)
+                    , case taskResult of
+                        Right identifier ->
+                            property (raw > 0 && taskIdValue identifier == natural)
+                        Left _ -> property (raw == 0)
+                    ]
+
+runProperties :: IO [(String, String)]
+runProperties = fmap concat (traverse runProperty properties)
+  where
+    runProperty (name, prop) = do
+        result <-
+            quickCheckWithResult
+                ( stdArgs
+                    { replay = Just (mkQCGen 2026, 0)
+                    , maxSuccess = 100
+                    , chatty = False
+                    }
+                )
+                prop
+        pure $
+            case isSuccess result of
+                True -> []
+                False -> [(name, output result)]
+
 -- Main.
 --------------------------------------------------------------------------------
 
 main :: IO ()
-main =
-    case [(name, message) | (name, Left message) <- tests] of
-        [] -> putStrLn ("All " <> show (length tests) <> " tests passed.")
-        failures -> do
+main = do
+    propertyFailures <- runProperties
+    let failures =
+            [(name, message) | (name, Left message) <- tests]
+                <> propertyFailures
+        total = length tests + length properties
+    case failures of
+        [] -> putStrLn ("All " <> show total <> " tests passed.")
+        _ -> do
             mapM_ report failures
             exitFailure
 

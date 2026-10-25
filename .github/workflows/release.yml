@@ -26,7 +26,7 @@ jobs:
         os: [ubuntu-22.04, macos-15, windows-latest]
     steps:
       - name: Checkout tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
@@ -41,7 +41,7 @@ jobs:
           package_version="$(sed -n 's/^version:[[:space:]]*//p' ansido.cabal | head -1 | tr -d '[:space:]')"
           test "$version" = "$package_version"
       - name: Set up GHC and Cabal
-        uses: haskell-actions/setup@v2
+        uses: haskell-actions/setup@0f8e8c99d88aeb3fbfd523f1ef2c6f762d10d64d # v2.12.1
         with:
           ghc-version: "9.14.1"
           cabal-version: "latest"
@@ -86,11 +86,11 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag }}
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: ${{ steps.package.outputs.asset }}
       - name: Upload package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ansido-${{ matrix.os }}
           path: ${{ steps.package.outputs.asset }}
@@ -104,7 +104,7 @@ jobs:
       contents: write
     steps:
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true
@@ -113,7 +113,7 @@ jobs:
           cd dist
           sha256sum * > SHA256SUMS
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: ${{ inputs.tag }}
           files: dist/*

@@ -26,6 +26,7 @@
 - Documented the Windows/GHC 9.2.8 limitation caused by Ansiform's `hSize` dependency and removed the unused `release` environment reference from the GitHub release workflow.
 - Corrected the package description, README data file path, Windows instructions, versioning policy and stale feature claims.
 - Fixed stale comments and documentation around statuses, `reads`, Delete key decoding and startup errors.
+- Pinned the actions used by the Release and Hackage workflows by commit SHA, matching the CI workflow.
 - Added the 0.9.0 feature section to the correct CHANGELOG section.
 
 ### 0.9.0

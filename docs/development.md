@@ -74,7 +74,7 @@ Install the Git hooks once with `pre-commit install`; they scan staged changes w
 
 ## Cross-platform
 
-The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, with Cabal 3.18.1.0. The actions are pinned by commit SHA.
+The application targets Linux, macOS and Windows. GitHub Actions runs `cabal build all`, `cabal test all`, `cabal check`, `cabal haddock` and `cabal sdist` on all three systems through `.github/workflows/ci.yml`. The matrix covers GHC 9.2.8 and 9.14.1 on Linux and macOS and GHC 9.14.1 on Windows, with Cabal 3.18.1.0. The actions are pinned by commit SHA, in CI as well as in the Release and Hackage workflows.
 
 ### Windows with GHC 9.2.8
 

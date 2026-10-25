@@ -26,7 +26,7 @@ jobs:
     environment: hackage
     steps:
       - name: Checkout tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
@@ -41,7 +41,7 @@ jobs:
           package_version="$(sed -n 's/^version:[[:space:]]*//p' ansido.cabal | head -1 | tr -d '[:space:]')"
           test "$version" = "$package_version"
       - name: Set up GHC and Cabal
-        uses: haskell-actions/setup@v2
+        uses: haskell-actions/setup@0f8e8c99d88aeb3fbfd523f1ef2c6f762d10d64d # v2.12.1
         with:
           ghc-version: "9.14.1"
           cabal-version: "latest"
